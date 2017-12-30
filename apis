@@ -9,6 +9,14 @@ User creation API:
     - If the email exists, return 422 with error message like "The email address is already registered".
     - If the email is brand new, return 200 with a login response {"api_user":"<some id>", "api_key":"<some random generated hash>"} and write this login response in the auth_tokens table
 
+  Method: PUT
+  Content (application-json): {"email":"<something>", "name":"<something>", "password":"<something>"}
+  Auth: None
+  Functionality: 
+    - Checks in the DB if the same user already exists by querying with the email address as key. Make sure the email is turned into lowercase.
+    - If the email exists, change the name and password in the DB.
+    - If the email is brand new, return 404.
+
 Login API:
 
 /login
