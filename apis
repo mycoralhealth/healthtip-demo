@@ -2,7 +2,7 @@ User creation API:
 
 /users
   Method: POST
-  Content (application-json): {"email":"<something>", "name":"<something>", "password":"<something>"}
+  Content (application-json): {"email":"<something>", "first_name":"<something>", "last_name":"<something>", "password":"<something>"}
   Auth: None
   Functionality: 
     - Checks in the DB if the same user already exists by querying with the email address as key. Make sure the email is turned into lowercase.
@@ -10,7 +10,7 @@ User creation API:
     - If the email is brand new, return 200 with a login response {"api_user":"<some id>", "api_key":"<some random generated hash>"} and write this login response in the auth_tokens table
 
   Method: PUT
-  Content (application-json): {"email":"<something>", "name":"<something>", "password":"<something>"}
+  Content (application-json): {"email":"<something>", "first_name":"<something>", "last_name":"<something>", "password":"<something>"}
   Auth: None
   Functionality: 
     - Checks in the DB if the same user already exists by querying with the email address as key. Make sure the email is turned into lowercase.
