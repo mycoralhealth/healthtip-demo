@@ -68,7 +68,7 @@ func updateUser(dbCon *sql.DB, u User) error {
 
 func checkUserExists(dbCon *sql.DB, u User) error {
 	var user User
-	if err := dbCon.QueryRow(`SELECT ROWID FROM users WHERE email = $1;`, u.Email).Scan(&user.ID); err == sql.ErrNoRows {
+	if err := dbCon.QueryRow(`SELECT * FROM users WHERE email = $1;`, u.Email).Scan(&user.ID); err == sql.ErrNoRows {
 		return fmt.Errorf("user not found: %v", u.Email)
 	}
 	return nil
@@ -94,8 +94,8 @@ func checkLogin(dbCon *sql.DB, u User) (int, error) {
 		count++
 
 		var user User
-		if err := rows.Scan(&user); err != nil {
-			return 0, fmt.Errorf("error scanning rows for user %v", u.Email)
+		if err := rows.Scan(&user.Email, &user.First_name, &user.Last_name, &user.Password); err != nil {
+			return 0, fmt.Errorf("error scanning rows for user %v: %v", u.Email, err)
 		}
 
 	}
@@ -114,7 +114,7 @@ func getAllRecords(dbCon *sql.DB) ([]Record, error) {
 
 	for rows.Next() {
 		var r Record
-		if err := rows.Scan(&r); err != nil {
+		if err := rows.Scan(&r.User_id, &r.Age, &r.Height, &r.Weight, &r.Cholesterol, &r.Blood_pressure); err != nil {
 			return nil, err
 		}
 
@@ -128,9 +128,9 @@ func getAllRecords(dbCon *sql.DB) ([]Record, error) {
 func getRecord(dbCon *sql.DB, ID int) (Record, error) {
 
 	var record Record
-	row := dbCon.QueryRow(`SELECT * FROM records WHERE id = $1;`, ID)
+	row := dbCon.QueryRow(`SELECT * FROM records WHERE user_id = $1;`, ID)
 
-	if err := row.Scan(&record); err != nil {
+	if err := row.Scan(&record.User_id, &record.Age, &record.Height, &record.Weight, &record.Cholesterol, &record.Blood_pressure); err != nil {
 		return record, err
 	}
 
@@ -144,7 +144,7 @@ func deleteRecord(dbCon *sql.DB, ID int) error {
 		return err
 	}
 
-	_, err := dbCon.Exec(`DELETE FROM records WHERE id = $1;`, ID)
+	_, err := dbCon.Exec(`DELETE FROM records WHERE user_id = $1;`, ID)
 
 	if err != nil {
 		return fmt.Errorf("couldn't delete %v in records table: %v", ID, err)
@@ -162,7 +162,7 @@ func updateRecord(dbCon *sql.DB, record Record) error {
 
 	_, err := dbCon.Exec(`UPDATE records
 		SET age = $1, height = $2, weight = $3, cholesterol = $4, blood_pressure = $5
-		WHERE id = $6;
+		WHERE user_id = $6;
 	`, record.Age, record.Height, record.Weight, record.Cholesterol, record.Blood_pressure, record.User_id)
 
 	if err != nil {
@@ -175,8 +175,8 @@ func updateRecord(dbCon *sql.DB, record Record) error {
 
 func writeRecord(dbCon *sql.DB, record Record) (int64, error) {
 	result, err := dbCon.Exec(`INSERT INTO records
-		(age, height, weight, cholesterol, blood_pressure) VALUES ($1, $2, $3, $4, $5);
-	`, record.Age, record.Height, record.Weight, record.Cholesterol, record.Blood_pressure)
+		(user_id, age, height, weight, cholesterol, blood_pressure) VALUES ($1, $2, $3, $4, $5, $6);
+	`, record.User_id, record.Age, record.Height, record.Weight, record.Cholesterol, record.Blood_pressure)
 	if err != nil {
 		return 0, fmt.Errorf("couldn't insert %v into records table: %v", record, err)
 	}

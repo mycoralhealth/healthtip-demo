@@ -81,15 +81,23 @@ func handleUpdateUser(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 		return
 	}
 
-	respondWithJSON(w, r, http.StatusCreated, user)
+	respondWithJSON(w, r, http.StatusCreated, user.Email)
 
 }
 
 func handleLogin(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
-	r.ParseForm()
+	err := r.ParseForm()
+	if err != nil {
+		handleError(w, r, http.StatusInternalServerError, err.Error())
+		return
+
+	}
+
+	//	fmt.Println(ioutil.ReadAll(r.Body))
 	var user User
 	user.Email = r.FormValue("email")
 	user.Password = hashPassword(r.FormValue("password"))
+
 	if err := checkUserExists(dbCon, user); err != nil {
 		handleError(w, r, 404, err.Error())
 		return
@@ -143,9 +151,7 @@ func handleRecords(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 			handleError(w, r, http.StatusInternalServerError, err.Error())
 			return
 		}
-
 		io.WriteString(w, string(bytes))
-		respondWithJSON(w, r, 200, auth)
 	}
 
 	if r.Method == "POST" {
@@ -196,7 +202,6 @@ func handleSingleRecord(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 		}
 
 		io.WriteString(w, string(bytes))
-		respondWithJSON(w, r, 200, record)
 	}
 
 	if r.Method == "DELETE" {
@@ -217,6 +222,7 @@ func handleSingleRecord(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 		}
 		defer r.Body.Close()
 
+		record.User_id = ID
 		if err := updateRecord(dbCon, record); err != nil {
 			handleError(w, r, http.StatusInternalServerError, err.Error())
 			return
