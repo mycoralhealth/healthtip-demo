@@ -28,6 +28,15 @@ func writeUser(dbCon *sql.DB, u User) (int64, error) {
 	return ID, nil
 }
 
+func writeAuthToken(dbCon *sql.DB, auth AuthToken) error {
+	_, err := dbCon.Exec(`INSERT INTO auth_tokens (api_user, api_key) VALUES ($1, $2);`, auth.Api_user, auth.Api_key)
+	if err != nil {
+		return fmt.Errorf("couldn't insert auth token for user: %v inth auth table", auth.Api_user)
+	}
+
+	return nil
+}
+
 func updateUser(dbCon *sql.DB, u User) error {
 
 	_, err := dbCon.Exec(`UPDATE users SET first_name = $1, last_name = $2, password = $3;`, u.First_name, u.Last_name, hashPassword(u.Password))
@@ -49,7 +58,8 @@ func checkUserExists(dbCon *sql.DB, u User) error {
 
 func hashPassword(password string) string {
 	hash := sha256.New()
-	hash.Write([]byte(password))
+	saltedPassword := "$%&*)(@#$)(*%@" + password + "%#$(*&#$%(*&@#)%"
+	hash.Write([]byte(saltedPassword))
 	md := hash.Sum(nil)
 	return hex.EncodeToString(md)
 }
