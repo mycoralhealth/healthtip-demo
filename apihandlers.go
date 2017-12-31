@@ -1,7 +1,9 @@
 package main
 
 import (
+	"crypto/rand"
 	"database/sql"
+	"encoding/base32"
 	"encoding/json"
 	"net/http"
 )
@@ -23,7 +25,32 @@ func handleWriteUser(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 	}
 
 	user.ID = int(lastID)
-	respondWithJSON(w, r, http.StatusCreated, user)
+
+	// create auth token and put in DB
+	var auth AuthToken
+	auth.Api_user = user.ID
+	// generated salted hash from current time and random number is the auth token
+	token, err := getToken(10)
+	if err != nil {
+		handleError(w, r, http.StatusInternalServerError, err.Error())
+	}
+
+	auth.Api_key = hashPassword(token)
+	if err := writeAuthToken(dbCon, auth); err != nil {
+		handleError(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	respondWithJSON(w, r, http.StatusCreated, auth)
+}
+
+func getToken(length int) (string, error) {
+	randomBytes := make([]byte, 32)
+	_, err := rand.Read(randomBytes)
+	if err != nil {
+		return "", err
+	}
+	return base32.StdEncoding.EncodeToString(randomBytes)[:length], nil
 }
 
 func handleUpdateUser(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
