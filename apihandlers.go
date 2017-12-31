@@ -5,7 +5,11 @@ import (
 	"database/sql"
 	"encoding/base32"
 	"encoding/json"
+	"io"
 	"net/http"
+	"strconv"
+
+	"github.com/gorilla/mux"
 )
 
 var auth AuthToken
@@ -90,6 +94,8 @@ func handleLogin(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 		handleError(w, r, 404, err.Error())
 		return
 	}
+
+	// make sure email and password match
 	ID, err := checkLogin(dbCon, user)
 	if err != nil {
 		handleError(w, r, 401, err.Error())
@@ -120,7 +126,103 @@ func handleLogout(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 }
 
 func handleRecords(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
+	if err := checkAuthToken(dbCon, auth); err != nil {
+		handleError(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	if r.Method == "GET" {
+		records, err := getAllRecords(dbCon)
+		if err != nil {
+			handleError(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		bytes, err := json.MarshalIndent(records, "", "  ")
+		if err != nil {
+			handleError(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		io.WriteString(w, string(bytes))
+		respondWithJSON(w, r, 200, auth)
+	}
+
+	if r.Method == "POST" {
+		var record Record
+		decoder := json.NewDecoder(r.Body)
+		if err := decoder.Decode(&record); err != nil {
+			handleError(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+		defer r.Body.Close()
+
+		ID, err := writeRecord(dbCon, record)
+		if err != nil {
+			handleError(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		record.User_id = int(ID)
+		respondWithJSON(w, r, http.StatusCreated, record)
+
+	}
+
 }
 
 func handleSingleRecord(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
+	if err := checkAuthToken(dbCon, auth); err != nil {
+		handleError(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	vars := mux.Vars(r)
+	ID, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		handleError(w, r, http.StatusNotFound, err.Error())
+		return
+	}
+
+	if r.Method == "GET" {
+		record, err := getRecord(dbCon, ID)
+		if err != nil {
+			handleError(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+		bytes, err := json.MarshalIndent(record, "", "  ")
+		if err != nil {
+			handleError(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		io.WriteString(w, string(bytes))
+		respondWithJSON(w, r, 200, record)
+	}
+
+	if r.Method == "DELETE" {
+
+		if err := deleteRecord(dbCon, ID); err != nil {
+			handleError(w, r, 404, err.Error())
+			return
+		}
+		respondWithJSON(w, r, 204, ID)
+	}
+
+	if r.Method == "PUT" {
+		var record Record
+		decoder := json.NewDecoder(r.Body)
+		if err := decoder.Decode(&record); err != nil {
+			handleError(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+		defer r.Body.Close()
+
+		if err := updateRecord(dbCon, record); err != nil {
+			handleError(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		respondWithJSON(w, r, 200, record)
+
+	}
 }

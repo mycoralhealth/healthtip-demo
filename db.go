@@ -75,6 +75,7 @@ func checkUserExists(dbCon *sql.DB, u User) error {
 
 }
 
+// checkLogin checks email against password in users table to make sure they match
 func checkLogin(dbCon *sql.DB, u User) (int, error) {
 	rows, err := dbCon.Query(`SELECT * FROM users WHERE email = $1 AND password = $2;`, u.Email, u.Password)
 	if err != nil {
@@ -100,6 +101,103 @@ func checkLogin(dbCon *sql.DB, u User) (int, error) {
 	}
 
 	return u.ID, nil
+
+}
+
+func getAllRecords(dbCon *sql.DB) ([]Record, error) {
+	records := make([]Record, 0)
+	rows, err := dbCon.Query(`SELECT * FROM records;`)
+	if err != nil {
+		return records, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var r Record
+		if err := rows.Scan(&r); err != nil {
+			return nil, err
+		}
+
+		records = append(records, r)
+	}
+
+	return records, nil
+
+}
+
+func getRecord(dbCon *sql.DB, ID int) (Record, error) {
+
+	var record Record
+	row := dbCon.QueryRow(`SELECT * FROM records WHERE id = $1;`, ID)
+
+	if err := row.Scan(&record); err != nil {
+		return record, err
+	}
+
+	return record, nil
+
+}
+
+func deleteRecord(dbCon *sql.DB, ID int) error {
+
+	if err := checkRecordExists(dbCon, ID); err != nil {
+		return err
+	}
+
+	_, err := dbCon.Exec(`DELETE FROM records WHERE id = $1;`, ID)
+
+	if err != nil {
+		return fmt.Errorf("couldn't delete %v in records table: %v", ID, err)
+	}
+
+	return nil
+
+}
+
+func updateRecord(dbCon *sql.DB, record Record) error {
+
+	if err := checkRecordExists(dbCon, record.User_id); err != nil {
+		return err
+	}
+
+	_, err := dbCon.Exec(`UPDATE records
+		SET age = $1, height = $2, weight = $3, cholesterol = $4, blood_pressure = $5
+		WHERE id = $6;
+	`, record.Age, record.Height, record.Weight, record.Cholesterol, record.Blood_pressure, record.User_id)
+
+	if err != nil {
+		return fmt.Errorf("couldn't record %v : %v", record, err)
+	}
+
+	return nil
+
+}
+
+func writeRecord(dbCon *sql.DB, record Record) (int64, error) {
+	result, err := dbCon.Exec(`INSERT INTO records
+		(age, height, weight, cholesterol, blood_pressure) VALUES ($1, $2, $3, $4, $5);
+	`, record.Age, record.Height, record.Weight, record.Cholesterol, record.Blood_pressure)
+	if err != nil {
+		return 0, fmt.Errorf("couldn't insert %v into records table: %v", record, err)
+	}
+	ID, err := result.LastInsertId()
+	if err != nil {
+		return 0, fmt.Errorf("couldn't retrieve ID of inserted record %v: %v", record, err)
+	}
+
+	return ID, nil
+
+}
+
+func checkRecordExists(dbCon *sql.DB, ID int) error {
+	var record Record
+
+	if err := dbCon.QueryRow(`SELECT id FROM records WHERE id = $1;
+	`, ID).Scan(&record); err == sql.ErrNoRows {
+		return fmt.Errorf("record ID %d not found", ID)
+	}
+
+	return nil
 
 }
 
