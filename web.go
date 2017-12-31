@@ -43,7 +43,7 @@ func makeMuxRouter(dbCon *sql.DB) http.Handler {
 	muxRouter := mux.NewRouter()
 	muxRouter.HandleFunc("/users", wrap(handleWriteUser)).Methods("POST")
 	muxRouter.HandleFunc("/users", wrap(handleUpdateUser)).Methods("PUT")
-	muxRouter.HandleFunc("/login", wrap(handleLogin)).Methods("GET")
+	muxRouter.HandleFunc("/login", wrap(handleLogin)).Methods("POST")
 	muxRouter.HandleFunc("/api/logout", wrap(handleLogout)).Methods("POST")
 	muxRouter.HandleFunc("/api/records", wrap(handleRecords)).Methods("GET")
 	muxRouter.HandleFunc("/api/records", wrap(handleRecords)).Methods("POST")
