@@ -37,7 +37,7 @@ func writeAuthToken(dbCon *sql.DB, auth AuthToken) error {
 	return nil
 }
 
-func checkAuthToken(dbCon *sql.DB, auth AuthToken) error {
+func checkLoginToken(dbCon *sql.DB, auth AuthToken) error {
 
 	var a AuthToken
 	if err := dbCon.QueryRow(`SELECT * FROM auth_tokens WHERE api_user = $1 AND api_key = $2;`, auth.Api_user, auth.Api_key).Scan(&a); err == sql.ErrNoRows {

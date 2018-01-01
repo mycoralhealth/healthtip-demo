@@ -86,18 +86,13 @@ func handleUpdateUser(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 }
 
 func handleLogin(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
-	err := r.ParseForm()
-	if err != nil {
-		handleError(w, r, http.StatusInternalServerError, err.Error())
-		return
-
-	}
-
-	//	fmt.Println(ioutil.ReadAll(r.Body))
 	var user User
-	user.Email = r.FormValue("email")
-	user.Password = hashPassword(r.FormValue("password"))
-
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&user); err != nil {
+		handleError(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	defer r.Body.Close()
 	if err := checkUserExists(dbCon, user); err != nil {
 		handleError(w, r, 404, err.Error())
 		return
@@ -120,7 +115,7 @@ func handleLogin(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 
 func handleLogout(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 
-	if err := checkAuthToken(dbCon, auth); err != nil {
+	if err := checkLoginToken(dbCon, auth); err != nil {
 		handleError(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -134,7 +129,7 @@ func handleLogout(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 }
 
 func handleRecords(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
-	if err := checkAuthToken(dbCon, auth); err != nil {
+	if err := checkLoginToken(dbCon, auth); err != nil {
 		handleError(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -177,7 +172,7 @@ func handleRecords(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 }
 
 func handleSingleRecord(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
-	if err := checkAuthToken(dbCon, auth); err != nil {
+	if err := checkLoginToken(dbCon, auth); err != nil {
 		handleError(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
