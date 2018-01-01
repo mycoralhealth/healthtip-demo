@@ -37,7 +37,7 @@ func writeAuthToken(dbCon *sql.DB, auth AuthToken) error {
 	return nil
 }
 
-func checkAuthToken(dbCon *sql.DB, auth AuthToken) error {
+func checkLoginToken(dbCon *sql.DB, auth AuthToken) error {
 
 	var a AuthToken
 	if err := dbCon.QueryRow(`SELECT * FROM auth_tokens WHERE api_user = $1 AND api_key = $2;`, auth.Api_user, auth.Api_key).Scan(&a); err == sql.ErrNoRows {
@@ -76,31 +76,31 @@ func checkUserExists(dbCon *sql.DB, u User) error {
 }
 
 // checkLogin checks email against password in users table to make sure they match
-func checkLogin(dbCon *sql.DB, u User) (int, error) {
+func checkLogin(dbCon *sql.DB, u User) error {
 	rows, err := dbCon.Query(`SELECT * FROM users WHERE email = $1 AND password = $2;`, u.Email, u.Password)
 	if err != nil {
-		return 0, fmt.Errorf("user %v password doesn't match", u.Email)
+		return fmt.Errorf("user %v password doesn't match", u.Email)
 	}
 	defer rows.Close()
 
 	var count int
 	for rows.Next() {
 
+		var user User
 		// make sure there's only one entry for user
-		if count > 1 {
-			return 0, fmt.Errorf("more than one entry for user %v", u.Email)
+		if count > 0 {
+			return fmt.Errorf("more than one entry for user %v", u.Email)
 		}
 
 		count++
 
-		var user User
 		if err := rows.Scan(&user.Email, &user.First_name, &user.Last_name, &user.Password); err != nil {
-			return 0, fmt.Errorf("error scanning rows for user %v: %v", u.Email, err)
+			return fmt.Errorf("error scanning rows for user %v: %v", u.Email, err)
 		}
 
 	}
 
-	return u.ID, nil
+	return nil
 
 }
 

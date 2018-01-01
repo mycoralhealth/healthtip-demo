@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/base32"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -86,30 +87,26 @@ func handleUpdateUser(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 }
 
 func handleLogin(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
-	err := r.ParseForm()
-	if err != nil {
-		handleError(w, r, http.StatusInternalServerError, err.Error())
-		return
-
-	}
-
-	//	fmt.Println(ioutil.ReadAll(r.Body))
 	var user User
-	user.Email = r.FormValue("email")
-	user.Password = hashPassword(r.FormValue("password"))
-
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&user); err != nil {
+		handleError(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	defer r.Body.Close()
 	if err := checkUserExists(dbCon, user); err != nil {
 		handleError(w, r, 404, err.Error())
 		return
 	}
 
-	// make sure email and password match
-	ID, err := checkLogin(dbCon, user)
-	if err != nil {
-		handleError(w, r, 401, err.Error())
+	if !checkBasicAuthLogin(r, dbCon, user) {
+		w.Header().Set("WWW-Authenticate", fmt.Sprintf(`Basic realm="%s"`, "MY REALM"))
+		w.WriteHeader(401)
+		w.Write([]byte("401 Unauthorized\n"))
 		return
 	}
-	if err := createAuthToken(ID, dbCon); err != nil {
+
+	if err := createAuthToken(user.ID, dbCon); err != nil {
 		handleError(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -118,13 +115,49 @@ func handleLogin(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 
 }
 
-func handleLogout(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
+func checkBasicAuthLogin(r *http.Request, dbCon *sql.DB, user User) bool {
 
-	if err := checkAuthToken(dbCon, auth); err != nil {
-		handleError(w, r, http.StatusInternalServerError, err.Error())
-		return
+	email, password, ok := r.BasicAuth()
+	if !ok {
+		return false
 	}
 
+	// make sure email and password match
+	if err := checkLogin(dbCon, user); err != nil {
+		return false
+	}
+
+	return user.Email == email && user.Password == password
+
+}
+
+func checkBasicAuth(r *http.Request, prefix string, suffix string) bool {
+	p, s, ok := r.BasicAuth()
+	if !ok {
+		return false
+	}
+
+	atoiP, err := strconv.Atoi(p)
+	if err != nil {
+		return false
+	}
+
+	atoiPrefix, _ := strconv.Atoi(prefix)
+	if err != nil {
+		return false
+	}
+
+	return atoiP == atoiPrefix && s == suffix
+
+}
+func handleLogout(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
+
+	if !checkBasicAuth(r, string(auth.Api_user), auth.Api_key) {
+		w.Header().Set("WWW-Authenticate", fmt.Sprintf(`Basic realm="%s"`, "MY REALM"))
+		w.WriteHeader(401)
+		w.Write([]byte("401 Unauthorized\n"))
+		return
+	}
 	if err := deleteAuthToken(dbCon, auth); err != nil {
 		handleError(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -134,11 +167,13 @@ func handleLogout(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 }
 
 func handleRecords(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
-	if err := checkAuthToken(dbCon, auth); err != nil {
-		handleError(w, r, http.StatusInternalServerError, err.Error())
+
+	if !checkBasicAuth(r, string(auth.Api_user), auth.Api_key) {
+		w.Header().Set("WWW-Authenticate", fmt.Sprintf(`Basic realm="%s"`, "MY REALM"))
+		w.WriteHeader(401)
+		w.Write([]byte("401 Unauthorized\n"))
 		return
 	}
-
 	if r.Method == "GET" {
 		records, err := getAllRecords(dbCon)
 		if err != nil {
@@ -177,11 +212,13 @@ func handleRecords(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 }
 
 func handleSingleRecord(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
-	if err := checkAuthToken(dbCon, auth); err != nil {
-		handleError(w, r, http.StatusInternalServerError, err.Error())
+
+	if !checkBasicAuth(r, string(auth.Api_user), auth.Api_key) {
+		w.Header().Set("WWW-Authenticate", fmt.Sprintf(`Basic realm="%s"`, "MY REALM"))
+		w.WriteHeader(401)
+		w.Write([]byte("401 Unauthorized\n"))
 		return
 	}
-
 	vars := mux.Vars(r)
 	ID, err := strconv.Atoi(vars["id"])
 	if err != nil {
