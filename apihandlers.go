@@ -5,10 +5,10 @@ import (
 	"database/sql"
 	"encoding/base32"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"strconv"
+	"errors"
 
 	"github.com/gorilla/mux"
 )
@@ -87,22 +87,21 @@ func handleUpdateUser(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 }
 
 func handleLogin(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
-	var user User
-	decoder := json.NewDecoder(r.Body)
-	if err := decoder.Decode(&user); err != nil {
-		handleError(w, r, http.StatusBadRequest, err.Error())
+	
+	user, err := getBasicLoginAuth(r);
+
+	if err != nil {
+		handleError(w, r, http.StatusUnauthorized, err.Error())
 		return
 	}
-	defer r.Body.Close()
+
 	if err := checkUserExists(dbCon, user); err != nil {
 		handleError(w, r, 404, err.Error())
 		return
 	}
 
-	if !checkBasicAuthLogin(r, dbCon, user) {
-		w.Header().Set("WWW-Authenticate", fmt.Sprintf(`Basic realm="%s"`, "MY REALM"))
-		w.WriteHeader(401)
-		w.Write([]byte("401 Unauthorized\n"))
+	if err := checkLoginAuth(dbCon, user); err != nil {
+		handleError(w, r, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
@@ -111,69 +110,58 @@ func handleLogin(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 		return
 	}
 
-	respondWithJSON(w, r, http.StatusCreated, auth)
-
+	respondWithJSON(w, r, http.StatusOK, auth)
 }
 
-func checkBasicAuthLogin(r *http.Request, dbCon *sql.DB, user User) bool {
+func getBasicLoginAuth(r *http.Request) (User, error) {
+	var user User
 
 	email, password, ok := r.BasicAuth()
 	if !ok {
-		return false
+		return user, errors.New("Invalid login auth")
 	}
 
-	// make sure email and password match
-	if err := checkLogin(dbCon, user); err != nil {
-		return false
-	}
+	user.Email = email
+	user.Password = password
 
-	return user.Email == email && user.Password == password
-
+	return user, nil
 }
 
-func checkBasicAuth(r *http.Request, prefix string, suffix string) bool {
+/*
+API handlers, authorization is handled in web.go wrapper function
+*/
+
+func getBasicAPIAuth(r *http.Request) (AuthToken, error) {
+	var token AuthToken
+
 	p, s, ok := r.BasicAuth()
 	if !ok {
-		return false
+		return token, errors.New("Invalid API Authorization token. Required Basic Api_user:Api_key.")
 	}
 
-	atoiP, err := strconv.Atoi(p)
+	apiUser, err := strconv.Atoi(p)
 	if err != nil {
-		return false
+		return token, errors.New("Invalid Api_user.")
 	}
 
-	atoiPrefix, _ := strconv.Atoi(prefix)
-	if err != nil {
-		return false
-	}
+	token.Api_user = apiUser
+	token.Api_key = s
 
-	return atoiP == atoiPrefix && s == suffix
-
+	return token, nil
 }
+
 func handleLogout(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 
-	if !checkBasicAuth(r, string(auth.Api_user), auth.Api_key) {
-		w.Header().Set("WWW-Authenticate", fmt.Sprintf(`Basic realm="%s"`, "MY REALM"))
-		w.WriteHeader(401)
-		w.Write([]byte("401 Unauthorized\n"))
-		return
-	}
 	if err := deleteAuthToken(dbCon, auth); err != nil {
 		handleError(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
-	auth = AuthToken{}
-	respondWithJSON(w, r, 201, auth)
+
+	respondWithJSON(w, r, http.StatusNoContent, nil)
 }
 
 func handleRecords(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 
-	if !checkBasicAuth(r, string(auth.Api_user), auth.Api_key) {
-		w.Header().Set("WWW-Authenticate", fmt.Sprintf(`Basic realm="%s"`, "MY REALM"))
-		w.WriteHeader(401)
-		w.Write([]byte("401 Unauthorized\n"))
-		return
-	}
 	if r.Method == "GET" {
 		records, err := getAllRecords(dbCon)
 		if err != nil {
@@ -206,19 +194,10 @@ func handleRecords(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 
 		record.User_id = int(ID)
 		respondWithJSON(w, r, http.StatusCreated, record)
-
 	}
-
 }
 
 func handleSingleRecord(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
-
-	if !checkBasicAuth(r, string(auth.Api_user), auth.Api_key) {
-		w.Header().Set("WWW-Authenticate", fmt.Sprintf(`Basic realm="%s"`, "MY REALM"))
-		w.WriteHeader(401)
-		w.Write([]byte("401 Unauthorized\n"))
-		return
-	}
 	vars := mux.Vars(r)
 	ID, err := strconv.Atoi(vars["id"])
 	if err != nil {
@@ -242,12 +221,11 @@ func handleSingleRecord(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 	}
 
 	if r.Method == "DELETE" {
-
 		if err := deleteRecord(dbCon, ID); err != nil {
-			handleError(w, r, 404, err.Error())
+			handleError(w, r, http.StatusNotFound, err.Error())
 			return
 		}
-		respondWithJSON(w, r, 204, ID)
+		respondWithJSON(w, r, http.StatusNoContent, ID)
 	}
 
 	if r.Method == "PUT" {
@@ -265,7 +243,6 @@ func handleSingleRecord(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 			return
 		}
 
-		respondWithJSON(w, r, 200, record)
-
+		respondWithJSON(w, r, http.StatusOK, record)
 	}
 }
