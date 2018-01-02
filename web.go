@@ -45,6 +45,22 @@ func run(dbCon *sql.DB) error {
 func makeMuxRouter(dbCon *sql.DB) http.Handler {
 	wrap := func(f func(w http.ResponseWriter, r *http.Request, dbCon *sql.DB)) func(w http.ResponseWriter, r *http.Request) {
 		return func(w http.ResponseWriter, r *http.Request) {
+			f(w, r, dbCon)
+		}
+	}
+
+	apiAuth := func(f func(w http.ResponseWriter, r *http.Request, dbCon *sql.DB)) func(w http.ResponseWriter, r *http.Request) {
+		return func(w http.ResponseWriter, r *http.Request) {
+			apiToken, err := getBasicAPIAuth(r);
+			if err != nil {
+				handleError(w, r, http.StatusUnauthorized, err.Error())
+				return
+			}
+
+			if err := checkAPIAuth(dbCon, apiToken); err != nil {
+				handleError(w, r, http.StatusUnauthorized, "Unauthorized")
+				return
+			}
 
 			f(w, r, dbCon)
 		}
@@ -54,12 +70,12 @@ func makeMuxRouter(dbCon *sql.DB) http.Handler {
 	muxRouter.HandleFunc("/users", wrap(handleWriteUser)).Methods("POST")
 	muxRouter.HandleFunc("/users", wrap(handleUpdateUser)).Methods("PUT")
 	muxRouter.HandleFunc("/login", wrap(handleLogin)).Methods("POST")
-	muxRouter.HandleFunc("/api/logout", wrap(handleLogout)).Methods("POST")
-	muxRouter.HandleFunc("/api/records", wrap(handleRecords)).Methods("GET")
-	muxRouter.HandleFunc("/api/records", wrap(handleRecords)).Methods("POST")
-	muxRouter.HandleFunc("/api/records/{id:[0-9]+}", wrap(handleSingleRecord)).Methods("GET")
-	muxRouter.HandleFunc("/api/records/{id:[0-9]+}", wrap(handleSingleRecord)).Methods("PUT")
-	muxRouter.HandleFunc("/api/records/{id:[0-9]+}", wrap(handleSingleRecord)).Methods("DELETE")
+	muxRouter.HandleFunc("/api/logout", apiAuth(handleLogout)).Methods("POST")
+	muxRouter.HandleFunc("/api/records", apiAuth(handleRecords)).Methods("GET")
+	muxRouter.HandleFunc("/api/records", apiAuth(handleRecords)).Methods("POST")
+	muxRouter.HandleFunc("/api/records/{id:[0-9]+}", apiAuth(handleSingleRecord)).Methods("GET")
+	muxRouter.HandleFunc("/api/records/{id:[0-9]+}", apiAuth(handleSingleRecord)).Methods("PUT")
+	muxRouter.HandleFunc("/api/records/{id:[0-9]+}", apiAuth(handleSingleRecord)).Methods("DELETE")
 
 	return muxRouter
 }

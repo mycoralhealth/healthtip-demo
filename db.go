@@ -41,7 +41,7 @@ func checkAPIAuth(dbCon *sql.DB, auth AuthToken) error {
 
 	var a AuthToken
 	if err := dbCon.QueryRow(`SELECT * FROM auth_tokens WHERE api_user = $1 AND api_key = $2;`, auth.Api_user, auth.Api_key).Scan(&a); err == sql.ErrNoRows {
-		return fmt.Errorf("user not found: %v", auth.Api_user)
+		return fmt.Errorf("Incorrect API token for user: %v", auth.Api_user)
 	}
 	return nil
 }
