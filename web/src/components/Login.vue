@@ -8,7 +8,7 @@
       <input v-model="email" type="email" id="inputEmail" class="form-control" placeholder="Email address" required autofocus>
       <label for="inputPassword" class="sr-only">Password</label>
       <input v-model="password" type="password" id="inputPassword" class="form-control" placeholder="Password" required>
-      <button class="btn btn-lg btn-primary btn-block" type="submit">Sign-in</button>
+      <button class="btn btn-lg btn-primary btn-block" type="submit"><i class="fa fa-circle-o-notch fa-spin" v-if="loading">&nbsp;</i><div v-else="loading">Sign-in</div></button>
     </form>
   </div>
 </template>
@@ -20,7 +20,8 @@ export default {
     return {
       email: '',
       password: '',
-      error: false
+      error: false,
+      loading: false
     }
   },
   updated () {
@@ -30,22 +31,27 @@ export default {
   },
   methods: {
     login () {
-      localStorage.token = this.email + ':' + this.password
-      console.log(localStorage.token)
+      this.loading = true
       this.$http.post('/login', {"email" : this.email, "password" : this.password}, {headers: {'Authorization': 'Basic ' + btoa(this.email + ':' + this.password)}})
         .then(request => this.loginSuccessful(request))
         .catch(() => this.loginFailed())
     },
     loginSuccessful (req) {
-      if (!req.data.token) {
+      this.loading = false
+
+      if (typeof(req.data.Api_user) === "undefined" || req.data.Api_user === null) {
         this.loginFailed()
         return
       }
+
       this.error = false
-      localStorage.token = req.data.token
+
+      localStorage.token = btoa(req.data.Api_user + ':' + req.data.Api_key)
+
       this.$router.replace(this.$route.query.redirect || '/records')
     },
     loginFailed () {
+      this.loading = false
       this.error = 'Invalid email address or password'
       delete localStorage.token
     }
