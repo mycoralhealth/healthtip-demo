@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"fmt"
+	"log"
 )
 
 func writeUser(dbCon *sql.DB, u User) (int64, error) {
@@ -68,9 +69,11 @@ func updateUser(dbCon *sql.DB, u User) error {
 
 func checkUserExists(dbCon *sql.DB, u User) error {
 	var user User
-	if err := dbCon.QueryRow(`SELECT * FROM users WHERE email = $1;`, u.Email).Scan(&user.ID); err == sql.ErrNoRows {
+	if err := dbCon.QueryRow(`SELECT * FROM users WHERE email = $1;`, u.Email).Scan(&user.ID, &user.Email, &user.First_name, &user.Last_name); err == sql.ErrNoRows {
 		return fmt.Errorf("user not found: %v", u.Email)
 	}
+	log.Println(user.First_name)
+
 	return nil
 
 }
@@ -78,7 +81,7 @@ func checkUserExists(dbCon *sql.DB, u User) error {
 func checkLoginAuth(dbCon *sql.DB, u User) error {
 	var a AuthToken
 	if err := dbCon.QueryRow(`SELECT * FROM users WHERE email = $1 AND password = $2;`, u.Email, hashPassword(u.Password)).Scan(&a); err == sql.ErrNoRows {
-		return fmt.Errorf("user not found: %v", auth.Api_user)
+		return fmt.Errorf("user not found: %v", u.ID)
 	}
 	return nil
 }

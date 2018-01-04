@@ -13,7 +13,16 @@ import (
 	"github.com/gorilla/mux"
 )
 
-var auth AuthToken
+func makeLoginResult(user User, auth AuthToken) LoginResult {
+	var result LoginResult
+
+	result.Token = auth
+	result.Email = user.Email
+	result.First_name = user.First_name
+	result.Last_name = user.Last_name
+
+	return result
+}
 
 func handleWriteUser(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 	var user User
@@ -32,30 +41,31 @@ func handleWriteUser(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 	}
 
 	user.ID = int(lastID)
-	if err := createAuthToken(user.ID, dbCon); err != nil {
+	auth, err := createAuthToken(user.ID, dbCon)
+	if err != nil {
 		handleError(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	respondWithJSON(w, r, http.StatusCreated, auth)
+	respondWithJSON(w, r, http.StatusCreated, makeLoginResult(user, auth))
 }
 
-func createAuthToken(ID int, dbCon *sql.DB) error {
+func createAuthToken(ID int, dbCon *sql.DB) (AuthToken, error) {
+	var auth AuthToken
 	// create auth token and put in DB
 	auth.Api_user = ID
 	// generated salted hash from current time and random number is the auth token
 	token, err := getRandomString(10)
 	if err != nil {
-		return err
+		return auth, err
 	}
 
 	auth.Api_key = hashPassword(token)
 	if err := writeAuthToken(dbCon, auth); err != nil {
-		return err
+		return auth, err
 	}
 
-	return nil
-
+	return auth, nil
 }
 
 func getRandomString(length int) (string, error) {
@@ -105,12 +115,13 @@ func handleLogin(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 		return
 	}
 
-	if err := createAuthToken(user.ID, dbCon); err != nil {
+	auth, err := createAuthToken(user.ID, dbCon)
+	if err != nil {
 		handleError(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	respondWithJSON(w, r, http.StatusOK, auth)
+	respondWithJSON(w, r, http.StatusOK, makeLoginResult(user, auth))
 }
 
 func getBasicLoginAuth(r *http.Request) (User, error) {
@@ -151,6 +162,7 @@ func getBasicAPIAuth(r *http.Request) (AuthToken, error) {
 }
 
 func handleLogout(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
+	auth, _ := getBasicAPIAuth(r);
 
 	if err := deleteAuthToken(dbCon, auth); err != nil {
 		handleError(w, r, http.StatusInternalServerError, err.Error())

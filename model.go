@@ -24,3 +24,12 @@ type Record struct {
 	Cholesterol    int
 	Blood_pressure int
 }
+
+// Login result
+
+type LoginResult struct {
+	Token AuthToken
+	Email string
+	First_name string
+	Last_name string
+}

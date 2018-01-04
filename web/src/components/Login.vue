@@ -1,19 +1,24 @@
 <template>
-  <div class="login-wrapper border border-light">
-    <form class="form-signin" @submit.prevent="login">
-      <img class="logo" src="../assets/logo.png">
-      <h2 class="form-signin-heading">Health Tip Sign-in</h2>
-      <div class="alert alert-danger" v-if="error">{{ error }}</div>
-      <label for="inputEmail" class="sr-only">Email address</label>
-      <input v-model="email" type="email" id="inputEmail" class="form-control" placeholder="Email address" required autofocus>
-      <label for="inputPassword" class="sr-only">Password</label>
-      <input v-model="password" type="password" id="inputPassword" class="form-control" placeholder="Password" required>
-      <button class="btn btn-lg btn-primary btn-block" type="submit"><i class="fa fa-circle-o-notch fa-spin" v-if="loading">&nbsp;</i><div v-else="loading">Sign-in</div></button>
-    </form>
+  <div class="login-overlay">
+    <div class="login-wrapper border border-light">
+      <form class="form-signin" @submit.prevent="login">
+        <img class="logo" src="../assets/logo.png">
+        <h2 class="form-signin-heading">Health Tip Sign-in</h2>
+        <div class="alert alert-danger" v-if="error">{{ error }}</div>
+        <label for="inputEmail" class="sr-only">Email address</label>
+        <input v-model="email" type="email" id="inputEmail" class="form-control" placeholder="Email address" required autofocus>
+        <label for="inputPassword" class="sr-only">Password</label>
+        <input v-model="password" type="password" id="inputPassword" class="form-control" placeholder="Password" required>
+        <button class="btn btn-lg btn-primary btn-block" :disabled="loading" type="submit"><i class="fa fa-circle-o-notch fa-spin" v-if="loading"></i><div v-else="loading">Sign-in</div></button>
+      </form>
+    </div>
   </div>
 </template>
 
 <script>
+
+import { mapGetters } from 'vuex'
+
 export default {
   name: 'Login',
   data () {
@@ -24,12 +29,21 @@ export default {
       loading: false
     }
   },
+  computed: {
+    ...mapGetters({ currentUser: 'currentUser' })
+  },
+  created () {
+    this.checkCurrentLogin()
+  },
   updated () {
-    if (localStorage.token) {
-      this.$router.replace(this.$route.query.redirect || '/records')
-    }
+    this.checkCurrentLogin()
   },
   methods: {
+    checkCurrentLogin () {
+      if (this.currentUser) {
+        this.$router.replace(this.$route.query.redirect || '/records')
+      }
+    },
     login () {
       this.loading = true
       this.$http.post('/login', {"email" : this.email, "password" : this.password}, {headers: {'Authorization': 'Basic ' + btoa(this.email + ':' + this.password)}})
@@ -39,21 +53,22 @@ export default {
     loginSuccessful (req) {
       this.loading = false
 
-      if (typeof(req.data.Api_user) === "undefined" || req.data.Api_user === null) {
+      if (typeof(req.data.Token) === "undefined" || req.data.Token === null) {
         this.loginFailed()
         return
       }
 
       this.error = false
 
-      localStorage.token = btoa(req.data.Api_user + ':' + req.data.Api_key)
-
+      localStorage.result = JSON.stringify(req.data);
+      this.$store.dispatch('login')
       this.$router.replace(this.$route.query.redirect || '/records')
     },
     loginFailed () {
       this.loading = false
       this.error = 'Invalid email address or password'
-      delete localStorage.token
+      this.$store.dispatch('logout')
+      delete localStorage.result
     }
   }
 }
@@ -64,10 +79,25 @@ body {
   background: #605B56;
 }
 
+.login-overlay {
+  background: #605B56 !important;
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+}
+
 .login-wrapper {
   background: #fff;
   width: 70%;
   margin: 12% auto;
+  animation: fadein 0.6s;
+}
+
+@keyframes fadein {
+    from { opacity: 0; }
+    to   { opacity: 1; }
 }
 
 .logo {
@@ -84,8 +114,9 @@ body {
 }
 
 .form-signin .form-signin-heading,
+
 .form-signin .checkbox {
-  margin-bottom: 20px;
+  margin-bottom: 10px;
 }
 
 .form-signin .checkbox {
