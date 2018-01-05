@@ -1,7 +1,7 @@
 <template>
   <div>
 
-    <div class="container" id="events">
+    <div class="container" id="records">
       <div class="col-sm-7">
         <div class="panel panel-default">
           <div class="panel-heading">
@@ -21,13 +21,13 @@
       </div>
       <div class="col-sm-5">
         <div class="list-group">
-          <a href="#" class="list-group-item" v-for="record in records">
-            <h4 class="list-group-item-heading"><i class="glyphicon glyphicon-bullhorn"></i> {{ record.Age }}</h4>
-            <p class="list-group-item-text" v-if="record.Height">Height: {{ record.Height }}</p>
-            <p class="list-group-item-text" v-if="record.Weight">Weight: {{ record.Weight }}</p>
-            <p class="list-group-item-text" v-if="record.Cholesterol">Cholesterol: {{ record.Cholesterol }}</p>
-            <p class="list-group-item-text" v-if="record.Blood_pressure">Blood Pressure: {{ record.Blood_pressure }}</p>
-            <button class="btn btn-xs btn-danger" v-on:click="deleteRecord($index)">Delete</button>
+          <a href="#" class="list-group-item" v-for="(r, index) in records">
+            <h4 class="list-group-item-heading"><i class="glyphicon glyphicon-bullhorn"></i> {{ r.age }}</h4>
+            <p class="list-group-item-text" v-if="r.height">Height: {{ r.height }}</p>
+            <p class="list-group-item-text" v-if="r.weight">Weight: {{ r.weight }}</p>
+            <p class="list-group-item-text" v-if="r.cholesterol">Cholesterol: {{ r.cholesterol }}</p>
+            <p class="list-group-item-text" v-if="r.blood_pressure">Blood Pressure: {{ r.blood_pressure }}</p>
+            <button class="btn btn-xs btn-danger" v-on:click="deleteRecord(index)">Delete</button>
           </a>
         </div>
       </div>
@@ -38,57 +38,75 @@
 
 
 <script>
+import { mapGetters } from 'vuex'
+
 export default {
   name: 'Records',
+  computed: {
+    ...mapGetters({ currentUser: 'currentUser' })
+  },
   data () {
     return {
       record: { Age: '', Height: '', Weight: '', Cholesterol: '', Blood_pressure: '' },
       records: []
     }
   },
-  ready: function() {
-    this.fetchRecords();
+  created () {
+    this.checkCurrentLogin()
+    this.fetchRecords()
   },
   methods: {
-
-    fetchRecords: function () {
-      var events = [];
-
-      this.$http.get('/api/records')
-        .success(function (records) {
-          this.$set('records', records);
-          console.log(records);
-        })
-        .error(function (err) {
-          console.log(err);
-        });
-    },
-
-    addRecord: function () {
-      if (this.record.Age.trim()) {
-        this.$http.post('/api/records', this.record)
-          .success(function (res) {
-            this.records.push(this.record);
-            console.log('Record added!');
-          })
-          .error(function (err) {
-            console.log(err);
-          });
+    checkCurrentLogin () {
+      if (!this.currentUser) {
+        this.$router.push('/')
       }
     },
 
-    deleteRecord: function (index) {
+    fetchRecords () {
+      this.$http.get('/api/records', {headers: {'Authorization': this.currentUser.getAuth()}})
+        .then(request => this.recordsLoaded(request))
+        .catch(() => this.loadAPIError())
+    },
+
+    addRecord () {
+      console.log(this.currentUser.getAuth())
+
+      if (this.record.Age.trim()) {
+        this.$http.post('/api/records', this.record, {headers: {'Authorization': this.currentUser.getAuth()}})
+          .then(request => this.appendRecordResult(request))
+          .catch(err => this.reportError(err));
+      }
+    },
+
+    deleteRecord (index) {
       if (confirm('Are you sure you want to delete this record?')) {
         // this.events.splice(index, 1);
-        this.$http.delete('api/records/' + record.id)
-          .success(function (res) {
-            console.log(res);
-            this.events.splice(index, 1);
-          })
-          .error(function (err) {
-            console.log(err);
-          });
+        this.$http.delete('api/records/' + this.records[index].id, {headers: {'Authorization': this.currentUser.getAuth()}})
+          .then(() => this.removeRecordFromResult(index))
+          .catch(err => this.reportError(err));
       }
+    },
+
+    appendRecordResult(req) {
+      this.records.push(req.data)
+    },
+
+    removeRecordFromResult(index) {
+      this.records.splice(index, 1);
+    },
+
+    recordsLoaded (req) {
+      this.records = req.data;
+      console.log(this.records);
+    },
+
+    reportError(err) {
+      console.log(err)
+    },
+
+    loadAPIError() {
+      this.$store.dispatch('logout')
+      this.$router.push('/')
     }
   }
 }

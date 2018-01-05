@@ -12,7 +12,7 @@ func writeUser(dbCon *sql.DB, u User) (int64, error) {
 
 	// check if user exists and return error if it does
 	// if checkUserExists function does NOT throw an error it means the user already exists
-	if err := checkUserExists(dbCon, u); err == nil {
+	if _, err := checkUserExists(dbCon, u); err == nil {
 		return 0, fmt.Errorf("user %v already exists", u.Email)
 	}
 
@@ -67,28 +67,28 @@ func updateUser(dbCon *sql.DB, u User) error {
 	return nil
 }
 
-func checkUserExists(dbCon *sql.DB, u User) error {
+func checkUserExists(dbCon *sql.DB, u User) (User, error) {
 	var user User
-	if err := dbCon.QueryRow(`SELECT * FROM users WHERE email = $1;`, u.Email).Scan(&user.ID, &user.Email, &user.First_name, &user.Last_name); err == sql.ErrNoRows {
-		return fmt.Errorf("user not found: %v", u.Email)
+	if err := dbCon.QueryRow(`SELECT ROWID, * FROM users WHERE email = $1;`, u.Email).Scan(&user.ID, &user.Email, &user.First_name, &user.Last_name, &user.Password); err == sql.ErrNoRows {
+		return user, fmt.Errorf("user not found: %v", u.Email)
 	}
 	log.Println(user.First_name)
 
-	return nil
+	return user, nil
 
 }
 
 func checkLoginAuth(dbCon *sql.DB, u User) error {
 	var a AuthToken
-	if err := dbCon.QueryRow(`SELECT * FROM users WHERE email = $1 AND password = $2;`, u.Email, hashPassword(u.Password)).Scan(&a); err == sql.ErrNoRows {
+	if err := dbCon.QueryRow(`SELECT * FROM users WHERE email = $1 AND password = $2;`, u.Email, u.Password).Scan(&a); err == sql.ErrNoRows {
 		return fmt.Errorf("user not found: %v", u.ID)
 	}
 	return nil
 }
 
-func getAllRecords(dbCon *sql.DB) ([]Record, error) {
+func getAllRecords(user_id int, dbCon *sql.DB) ([]Record, error) {
 	records := make([]Record, 0)
-	rows, err := dbCon.Query(`SELECT * FROM records;`)
+	rows, err := dbCon.Query(`SELECT ROWID, * FROM records WHERE User_id= $1;`, user_id)
 	if err != nil {
 		return records, err
 	}
@@ -96,7 +96,7 @@ func getAllRecords(dbCon *sql.DB) ([]Record, error) {
 
 	for rows.Next() {
 		var r Record
-		if err := rows.Scan(&r.User_id, &r.Age, &r.Height, &r.Weight, &r.Cholesterol, &r.Blood_pressure); err != nil {
+		if err := rows.Scan(&r.ID, &r.User_id, &r.Age, &r.Height, &r.Weight, &r.Cholesterol, &r.Blood_pressure); err != nil {
 			return nil, err
 		}
 
@@ -110,9 +110,9 @@ func getAllRecords(dbCon *sql.DB) ([]Record, error) {
 func getRecord(dbCon *sql.DB, ID int) (Record, error) {
 
 	var record Record
-	row := dbCon.QueryRow(`SELECT * FROM records WHERE user_id = $1;`, ID)
+	row := dbCon.QueryRow(`SELECT ROWID, * FROM records WHERE ROWID = $1;`, ID)
 
-	if err := row.Scan(&record.User_id, &record.Age, &record.Height, &record.Weight, &record.Cholesterol, &record.Blood_pressure); err != nil {
+	if err := row.Scan(&record.ID, &record.User_id, &record.Age, &record.Height, &record.Weight, &record.Cholesterol, &record.Blood_pressure); err != nil {
 		return record, err
 	}
 
@@ -126,7 +126,7 @@ func deleteRecord(dbCon *sql.DB, ID int) error {
 		return err
 	}
 
-	_, err := dbCon.Exec(`DELETE FROM records WHERE user_id = $1;`, ID)
+	_, err := dbCon.Exec(`DELETE FROM records WHERE ROWID = $1;`, ID)
 
 	if err != nil {
 		return fmt.Errorf("couldn't delete %v in records table: %v", ID, err)
@@ -144,8 +144,8 @@ func updateRecord(dbCon *sql.DB, record Record) error {
 
 	_, err := dbCon.Exec(`UPDATE records
 		SET age = $1, height = $2, weight = $3, cholesterol = $4, blood_pressure = $5
-		WHERE user_id = $6;
-	`, record.Age, record.Height, record.Weight, record.Cholesterol, record.Blood_pressure, record.User_id)
+		WHERE ROWID = $6;
+	`, record.Age, record.Height, record.Weight, record.Cholesterol, record.Blood_pressure, record.ID)
 
 	if err != nil {
 		return fmt.Errorf("couldn't record %v : %v", record, err)
@@ -168,13 +168,12 @@ func writeRecord(dbCon *sql.DB, record Record) (int64, error) {
 	}
 
 	return ID, nil
-
 }
 
 func checkRecordExists(dbCon *sql.DB, ID int) error {
 	var record Record
 
-	if err := dbCon.QueryRow(`SELECT id FROM records WHERE id = $1;
+	if err := dbCon.QueryRow(`SELECT id FROM records WHERE ROWID = $1;
 	`, ID).Scan(&record); err == sql.ErrNoRows {
 		return fmt.Errorf("record ID %d not found", ID)
 	}

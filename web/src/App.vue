@@ -34,7 +34,7 @@ export default {
   methods: {
     checkCurrentLogin () {
       if (!this.currentUser && this.$route.path !== '/') {
-        this.$router.push('/?redirect=' + this.$route.path)
+        this.$router.push('/')
       }
     }
   },

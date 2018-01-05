@@ -25,4 +25,8 @@ export default class User {
     this.firstName = firstName
     this.lastName = lastName
   }
+
+  getAuth () {
+    return "Basic " + btoa(this.id + ':' + this.key)
+  }
 }

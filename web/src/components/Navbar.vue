@@ -3,7 +3,7 @@
     <a class="navbar-brand" href="/">Your Medical Records</a>
 
     <span class="navbar-text">
-      {{ currentUser.email }}
+      {{ currentUser.firstName }}&nbsp;{{ currentUser.lastName }}
       <router-link to="/logout" class="btn btn-logout btn-sm">Logout</router-link>
     </span>
 

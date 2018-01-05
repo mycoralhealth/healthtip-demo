@@ -105,23 +105,25 @@ func handleLogin(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 		return
 	}
 
-	if err := checkUserExists(dbCon, user); err != nil {
+	dbUser, err := checkUserExists(dbCon, user); 
+
+	if err != nil {
 		handleError(w, r, 404, err.Error())
 		return
 	}
 
-	if err := checkLoginAuth(dbCon, user); err != nil {
+	if err := checkLoginAuth(dbCon, dbUser); err != nil {
 		handleError(w, r, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
-	auth, err := createAuthToken(user.ID, dbCon)
+	auth, err := createAuthToken(dbUser.ID, dbCon)
 	if err != nil {
 		handleError(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	respondWithJSON(w, r, http.StatusOK, makeLoginResult(user, auth))
+	respondWithJSON(w, r, http.StatusOK, makeLoginResult(dbUser, auth))
 }
 
 func getBasicLoginAuth(r *http.Request) (User, error) {
@@ -173,9 +175,10 @@ func handleLogout(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 }
 
 func handleRecords(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
+	auth, _ := getBasicAPIAuth(r);
 
 	if r.Method == "GET" {
-		records, err := getAllRecords(dbCon)
+		records, err := getAllRecords(auth.Api_user, dbCon)
 		if err != nil {
 			handleError(w, r, http.StatusInternalServerError, err.Error())
 			return
@@ -198,13 +201,14 @@ func handleRecords(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 		}
 		defer r.Body.Close()
 
+		record.User_id = auth.Api_user
 		ID, err := writeRecord(dbCon, record)
 		if err != nil {
 			handleError(w, r, http.StatusInternalServerError, err.Error())
 			return
 		}
 
-		record.User_id = int(ID)
+		record.ID = int(ID)
 		respondWithJSON(w, r, http.StatusCreated, record)
 	}
 }
@@ -249,7 +253,7 @@ func handleSingleRecord(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 		}
 		defer r.Body.Close()
 
-		record.User_id = ID
+		record.ID = ID
 		if err := updateRecord(dbCon, record); err != nil {
 			handleError(w, r, http.StatusInternalServerError, err.Error())
 			return

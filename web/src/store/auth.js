@@ -8,13 +8,11 @@ const state = {
 
 const mutations = {
   [MutationTypes.LOGIN] (state) {
-  	console.log(localStorage.result)
     state.user = User.from(localStorage.result)
-    console.log("state.user")
-    console.log(state.user)
   },
   [MutationTypes.LOGOUT] (state) {
     state.user = null
+    delete localStorage.result
   }
 }
 

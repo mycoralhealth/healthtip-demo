@@ -17,19 +17,20 @@ type AuthToken struct {
 
 // Record is the lab test results of the user
 type Record struct {
-	User_id        int
-	Age            int
-	Height         int
-	Weight         int
-	Cholesterol    int
-	Blood_pressure int
+	ID             int `json:"id,string,omitempty"`
+	User_id        int `json:"User_id,string,omitempty"`
+	Age            int `json:"age,string,omitempty"`
+	Height         int `json:"height,string,omitempty"`
+	Weight         int `json:"weight,string,omitempty"`
+	Cholesterol    int `json:"cholesterol,string,omitempty"`
+	Blood_pressure int `json:"blood_pressure,string,omitempty"`
 }
 
 // Login result
 
 type LoginResult struct {
-	Token AuthToken
-	Email string
-	First_name string
-	Last_name string
+	Token          AuthToken
+	Email          string
+	First_name     string
+	Last_name      string
 }
