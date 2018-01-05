@@ -24,7 +24,7 @@ func run(dbCon *sql.DB) error {
 		Debug: true,
 		AllowedHeaders: []string{"*"},
 		AllowedOrigins: []string{"*"}, // All origins. TODO: we need to make this an env and put localhost in here
-		AllowedMethods: []string{"GET", "POST", "PUT"}, // Allowing GET, POST, PUT
+		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE"}, // Allowing GET, POST, PUT
   	})	
 
 	s := &http.Server{
