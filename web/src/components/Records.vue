@@ -84,7 +84,7 @@
                   <td><a href="#" v-on:click="deleteRecord(index)"><i class="fa fa-trash-o"></i></a></td>
                 </tr>
                 <tr class="text-left">
-                  <td colspan="6"><button type="button" class="btn btn-outline-success">Request Tip</button><br><br></td>
+                  <td colspan="6"><button type="button" class="btn btn-outline-success" v-on:click="requestTip(index)">Request Tip</button><br><br></td>
                 </tr>
               </tbody>
             </table>
@@ -96,6 +96,10 @@
         <p class="text-muted text-center copy"><small>Copyright &copy; 2018 <a href="https://mycoralhealth.com">Coral Health</a></small></p>
       </div> <!-- /container -->
 
+      <simplert :useRadius="true"
+                :useIcon="true"
+                ref="simplert">
+      </simplert>
     </main>
 
 </template>
@@ -103,9 +107,11 @@
 
 <script>
 import { mapGetters } from 'vuex'
+import Simplert from 'vue2-simplert'
 
 export default {
   name: 'Records',
+  components: { Simplert },
   computed: {
     ...mapGetters({ currentUser: 'currentUser' })
   },
@@ -136,21 +142,33 @@ export default {
 
     addRecord () {
       this.loading = true
-      console.log(this.currentUser.getAuth())
 
       if (this.record.age.trim()) {
         this.$http.post('/api/records', this.record, {headers: {'Authorization': this.currentUser.getAuth()}})
           .then(request => this.appendRecordResult(request))
-          .catch(err => this.reportError(err));
+          .catch(err => this.reportError(err))
       }
     },
 
     deleteRecord (index) {
-      if (confirm('Are you sure you want to delete this record?')) {
-        this.$http.delete('api/records/' + this.records[index].id, {headers: {'Authorization': this.currentUser.getAuth()}})
-          .then(() => this.removeRecordFromResult(index))
-          .catch(err => this.reportError(err));
+      var that = this
+
+      let confirmFn = function() {
+        that.$http.delete('api/records/' + that.records[index].id, {headers: {'Authorization': that.currentUser.getAuth()}})
+          .then(() => that.removeRecordFromResult(index))
+          .catch(err => that.reportError(err))
       }
+
+      let obj = {
+          title: 'Delete Test Result',
+          message: 'Are you sure you want to delete this test result?',
+          type: 'warning',
+          customConfirmBtnText:'Delete',
+          customConfirmBtnClass:'simplert__confirm simplert__confirm--radius bg-danger',
+          useConfirmBtn: true,
+          onConfirm: confirmFn
+      }
+      this.$refs.simplert.openSimplert(obj)
     },
 
     appendRecordResult(req) {
@@ -164,17 +182,24 @@ export default {
 
     recordsLoaded (req) {
       this.records = req.data;
-      console.log(this.records);
     },
 
     reportError(err) {
       this.loading = false
-      console.log(err)
     },
 
     loadAPIError() {
       this.$store.dispatch('logout')
       this.$router.push('/')
+    },
+
+    requestTip(index) {
+      let obj = {
+          title: 'Request Sent',
+          message: 'Your request for Health Tip was just sent to a group of medical professionals. You should receive a reponse in the next 24 hours.',
+          type: 'success'
+      }
+      this.$refs.simplert.openSimplert(obj)
     }
   }
 }
@@ -208,6 +233,10 @@ export default {
   margin-bottom: 30px;
   width: 100%;
   text-align: center;
+}
+
+.btn-spacer {
+  margin-right: 15px;
 }
 
 </style>

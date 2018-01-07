@@ -16,7 +16,6 @@ export default class User {
       })
     } catch (x) {
       console.log(x)
-      console.log("Exception")
       return null
     }
   }
