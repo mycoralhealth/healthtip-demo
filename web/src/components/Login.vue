@@ -3,13 +3,21 @@
     <div class="login-wrapper border border-light">
       <form class="form-signin" @submit.prevent="login">
         <img class="logo" src="../assets/logo.png">
-        <h2 class="form-signin-heading">Health Tip Sign-in</h2>
+        <h2 class="form-signin-heading">Health Tip</h2>
         <div class="alert alert-danger" v-if="error">{{ error }}</div>
         <label for="inputEmail" class="sr-only">Email address</label>
         <input v-model="email" type="email" id="inputEmail" class="form-control" placeholder="Email address" required autofocus>
         <label for="inputPassword" class="sr-only">Password</label>
         <input v-model="password" type="password" id="inputPassword" class="form-control" placeholder="Password" required>
-        <button class="btn btn-lg btn-primary btn-block" :disabled="loading" type="submit"><i class="fa fa-circle-o-notch fa-spin" v-if="loading"></i><div v-else="loading">Sign-in</div></button>
+        <button class="btn btn-lg btn-primary btn-block" :disabled="loading" type="submit"><i class="fa fa-refresh fa-spin" v-if="loading"></i><div v-else="loading">Sign-in</div></button>
+
+        <p class="sign-up">
+          Not a member yet?
+          <br>
+          <a href="/signup">Sign-up</a>
+        </p>
+
+        <p class="text-muted copy"><small>Copyright &copy; 2018 <a href="https://mycoralhealth.com">Coral Health</a></small></p>
       </form>
     </div>
   </div>
@@ -53,7 +61,7 @@ export default {
     loginSuccessful (req) {
       this.loading = false
 
-      if (typeof(req.data.Token) === "undefined" || req.data.Token === null) {
+      if (typeof(req.data.token) === "undefined" || req.data.token === null) {
         this.loginFailed()
         return
       }
@@ -74,23 +82,30 @@ export default {
 }
 </script>
 
-<style lang="css">
+<style lang="css" scoped>
 body {
-  background: #605B56;
+  background-color: white;
 }
 
 .login-overlay {
-  background: #605B56 !important;
+  background-image: url("../assets/background.jpg");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
   position: absolute;
   width: 100%;
-  height: 100%;
+  height: 120%;
   top: 0;
   left: 0;
 }
 
 .login-wrapper {
-  background: #fff;
-  width: 70%;
+  width: 400px;
+  min-width: 260px;
+  max-width: 400px;  
+  background: white;
+  background-color: white;
   margin: 12% auto;
   animation: fadein 0.6s;
 }
@@ -113,8 +128,13 @@ body {
   margin: 0 auto;
 }
 
-.form-signin .form-signin-heading,
+.form-signin-heading {
+  margin-bottom: 30px;
+  text-align: center;
+  width: 100%;
+}
 
+.form-signin, 
 .form-signin .checkbox {
   margin-bottom: 10px;
 }
@@ -147,4 +167,17 @@ body {
   border-top-left-radius: 0;
   border-top-right-radius: 0;
 }
+
+.sign-up {
+  margin-top: 40px;
+  margin-bottom: 20px;
+}
+
+.copy {
+  margin-top: 40px;
+  margin-bottom: 0px;
+  width: 100%;
+  text-align: center;
+}
+
 </style>

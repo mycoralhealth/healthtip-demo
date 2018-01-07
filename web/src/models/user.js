@@ -2,14 +2,17 @@
 export default class User {
   static from (result) {
     try {
+      if (!result)
+        return null;
+
       var user = JSON.parse(result)
 
       return new User({
-        "api_user": user.Token.Api_user,
-        "api_key": user.Token.Api_key,
-        "email": user.Email,
-        "firstName": user.First_name,
-        "lastName": user.Last_name
+        "api_user": user.token.apiUser,
+        "api_key": user.token.apiKey,
+        "email": user.email,
+        "firstName": user.firstName,
+        "lastName": user.lastName
       })
     } catch (x) {
       console.log(x)
