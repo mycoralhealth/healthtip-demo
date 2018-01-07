@@ -14,7 +14,6 @@
 
 <script>
 import Navbar from '@/components/Navbar'
-import Footer from '@/components/Footer'
 import { mapGetters } from 'vuex'
 
 export default {
@@ -33,14 +32,13 @@ export default {
   },
   methods: {
     checkCurrentLogin () {
-      if (!this.currentUser && this.$route.path !== '/') {
+      if (!this.currentUser && (this.$route.path !== '/') && (this.$route.path !== '/signup')) {
         this.$router.push('/')
       }
     }
   },
   components: {
-    Navbar,
-    Footer
+    Navbar
   }
 }
 </script>

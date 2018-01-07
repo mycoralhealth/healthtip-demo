@@ -80,9 +80,9 @@ func makeMuxRouter(dbCon *sql.DB) http.Handler {
 	return muxRouter
 }
 
-func handleError(w http.ResponseWriter, r *http.Request, code int, long string) {
-	http.Error(w, http.StatusText(code), code)
-	log.Println(r.Method, r.URL, ": HTTP", code, ": ", long)
+func handleError(w http.ResponseWriter, r *http.Request, code int, message string) {
+	http.Error(w, message, code)
+	log.Println(r.Method, r.URL, ": HTTP", code, ": ", message)
 }
 
 func respondWithJSON(w http.ResponseWriter, r *http.Request, code int, payload interface{}) {

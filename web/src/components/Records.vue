@@ -1,54 +1,126 @@
 <template>
-  <div>
+    <main role="main" class="records-overlay">
 
-    <div class="container" id="records">
-      <div class="col-sm-7">
-        <div class="panel panel-default">
-          <div class="panel-heading">
-            <h3>Add new medical record:</h3>
+      <!-- Main jumbotron for a primary marketing message or call to action -->
+      <div class="jumbotron jumbotron-push">
+        <div class="container">
+          <h1 class="display-3">Hello, welcome to Health Tips!</h1>
+          <p>We at Coral Health are working on the future of the healthcare ecosystem. This is a demo app to illustrate how anyone can get
+          personalized health tips easily with a full fledged decentralized medical records system. Start by adding some test records.</p>
+          <p><a class="btn btn-primary btn-lg" href="https://www.mycoralhealth.com" role="button">Learn more &raquo;</a></p>
+        </div>
+      </div>
+
+      <div class="container">
+        <!-- Example row of columns -->
+        <div class="row">
+          <div class="col-md-4">
+            <h2>Add Test Result</h2>
+              <div class="alert alert-danger" v-if="error">{{ error }}</div>
+              <form class="form-new-result" @submit.prevent="addRecord">
+                <div class="form-group">
+                  <label for="inputAge" class="sr-only">Age</label>
+                  <div class="input-group">
+                    <input type="number" min="0" step="1" id="inputAge" class="form-control" placeholder="Age" v-model="record.age" required>
+                  </div>
+                  <label for="inputHeight" class="sr-only">Height</label>
+                  <div class="input-group">
+                    <input type="number" min="0" class="form-control" id="inputHeight" placeholder="Height" v-model="record.height" required>
+                    <div class="input-group-append">
+                      <span class="input-group-text">cm</span>
+                    </div>
+                  </div>
+                  <label for="inputWeight" class="sr-only">Weight</label>
+                  <div class="input-group">
+                    <input type="number" min="0" class="form-control" id="inputWeight" placeholder="Weight" v-model="record.weight" required>
+                    <div class="input-group-append">
+                      <span class="input-group-text">kg</span>
+                    </div>
+                  </div>
+                  <label for="inputCholesterol" class="sr-only">Cholesterol</label>
+                  <div class="input-group">
+                    <input type="number" min="0" class="form-control" id="inputCholesterol" placeholder="Cholesterol" v-model="record.cholesterol" required>
+                    <div class="input-group-append">
+                      <span class="input-group-text">mg/dL</span>
+                    </div>
+                  </div>
+                  <label for="inputBloodPressure" class="sr-only">Blood pressure</label>
+                  <div class="input-group">
+                    <input type="number" min="0" class="form-control" id="inputBloodPressure" placeholder="Blood Pressure" v-model="record.bloodPressure" required>
+                    <div class="input-group-append">
+                      <span class="input-group-text">mmHg</span>
+                    </div>
+                  </div>
+
+                  <button class="btn btn-secondary" :disabled="loading" type="submit" href="#" role="button"><i class="fa fa-refresh fa-spin" v-if="loading"></i><div v-else="loading">Add</div></button>
+                </div>
+              </form>
           </div>
-          <div class="panel-body">
-            <div>
-              <input type="number" min="0" step="1" class="form-control" placeholder="Age" v-model="record.Age">
-              <input type="number" min="0" class="form-control" placeholder="Height" v-model="record.Height">
-              <input type="number" min="0" class="form-control" placeholder="Weight" v-model="record.Weight">
-              <input type="number" min="0" class="form-control" placeholder="Cholesterol" v-model="record.Cholesterol">
-              <input type="number" min="0" class="form-control" placeholder="Blood Pressure" v-model="record.Blood_pressure">
-              <button class="btn btn-primary" v-on:click="addRecord">Add</button>
+          <div class="col-md-8">
+            <h2>Previous Results</h2>
+
+            <div class="alert alert-warning text-center" role="alert" v-if="records.length == 0">
+              It looks like you don't have any test results submitted yet. Go ahead add some.
             </div>
+
+            <table class="table table-striped text-center">
+              <thead>
+                <tr>
+                  <th>Age</th>
+                  <th>Height (cm)</th>
+                  <th>Weight (kg)</th>
+                  <th>Cholesterol (mg/dL)</th>
+                  <th>Blood Pressure (mmHg)</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody v-for="(r, index) in records">
+                <tr>
+                  <th scope="row">{{ r.age }}</th>
+                  <td>{{ r.height }}</td>
+                  <td>{{ r.weight }}</td>
+                  <td>{{ r.cholesterol }}</td>
+                  <td>{{ r.bloodPressure }}</td>
+                  <td><a href="#" v-on:click="deleteRecord(index)"><i class="fa fa-trash-o"></i></a></td>
+                </tr>
+                <tr class="text-left">
+                  <td colspan="6"><button type="button" class="btn btn-outline-success" v-on:click="requestTip(index)">Request Tip</button><br><br></td>
+                </tr>
+              </tbody>
+            </table>
+
           </div>
         </div>
-      </div>
-      <div class="col-sm-5">
-        <div class="list-group">
-          <a href="#" class="list-group-item" v-for="(r, index) in records">
-            <h4 class="list-group-item-heading"><i class="glyphicon glyphicon-bullhorn"></i> {{ r.age }}</h4>
-            <p class="list-group-item-text" v-if="r.height">Height: {{ r.height }}</p>
-            <p class="list-group-item-text" v-if="r.weight">Weight: {{ r.weight }}</p>
-            <p class="list-group-item-text" v-if="r.cholesterol">Cholesterol: {{ r.cholesterol }}</p>
-            <p class="list-group-item-text" v-if="r.blood_pressure">Blood Pressure: {{ r.blood_pressure }}</p>
-            <button class="btn btn-xs btn-danger" v-on:click="deleteRecord(index)">Delete</button>
-          </a>
-        </div>
-      </div>
-    </div>
 
-  </div>
+        <hr>
+        <p class="text-muted text-center copy"><small>Copyright &copy; 2018 <a href="https://mycoralhealth.com">Coral Health</a></small></p>
+      </div> <!-- /container -->
+
+      <simplert :useRadius="true"
+                :useIcon="true"
+                ref="simplert">
+      </simplert>
+    </main>
+
 </template>
 
 
 <script>
 import { mapGetters } from 'vuex'
+import Simplert from 'vue2-simplert'
 
 export default {
   name: 'Records',
+  components: { Simplert },
   computed: {
     ...mapGetters({ currentUser: 'currentUser' })
   },
   data () {
     return {
-      record: { Age: '', Height: '', Weight: '', Cholesterol: '', Blood_pressure: '' },
-      records: []
+      record: { age: '', height: '', weight: '', cholesterol: '', bloodPressure: '' },
+      records: [],
+      loading: false,
+      error: false
     }
   },
   created () {
@@ -69,25 +141,38 @@ export default {
     },
 
     addRecord () {
-      console.log(this.currentUser.getAuth())
+      this.loading = true
 
-      if (this.record.Age.trim()) {
+      if (this.record.age.trim()) {
         this.$http.post('/api/records', this.record, {headers: {'Authorization': this.currentUser.getAuth()}})
           .then(request => this.appendRecordResult(request))
-          .catch(err => this.reportError(err));
+          .catch(err => this.reportError(err))
       }
     },
 
     deleteRecord (index) {
-      if (confirm('Are you sure you want to delete this record?')) {
-        // this.events.splice(index, 1);
-        this.$http.delete('api/records/' + this.records[index].id, {headers: {'Authorization': this.currentUser.getAuth()}})
-          .then(() => this.removeRecordFromResult(index))
-          .catch(err => this.reportError(err));
+      var that = this
+
+      let confirmFn = function() {
+        that.$http.delete('api/records/' + that.records[index].id, {headers: {'Authorization': that.currentUser.getAuth()}})
+          .then(() => that.removeRecordFromResult(index))
+          .catch(err => that.reportError(err))
       }
+
+      let obj = {
+          title: 'Delete Test Result',
+          message: 'Are you sure you want to delete this test result?',
+          type: 'warning',
+          customConfirmBtnText:'Delete',
+          customConfirmBtnClass:'simplert__confirm simplert__confirm--radius bg-danger',
+          useConfirmBtn: true,
+          onConfirm: confirmFn
+      }
+      this.$refs.simplert.openSimplert(obj)
     },
 
     appendRecordResult(req) {
+      this.loading = false
       this.records.push(req.data)
     },
 
@@ -97,35 +182,61 @@ export default {
 
     recordsLoaded (req) {
       this.records = req.data;
-      console.log(this.records);
     },
 
     reportError(err) {
-      console.log(err)
+      this.loading = false
     },
 
     loadAPIError() {
       this.$store.dispatch('logout')
       this.$router.push('/')
+    },
+
+    requestTip(index) {
+      let obj = {
+          title: 'Request Sent',
+          message: 'Your request for Health Tip was just sent to a group of medical professionals. You should receive a reponse in the next 24 hours.',
+          type: 'success'
+      }
+      this.$refs.simplert.openSimplert(obj)
     }
   }
 }
 </script>
 
 <!-- Add "scoped" attribute to limit CSS to this component only -->
-<style scoped>
-h1, h2 {
-  font-weight: normal;
+<style lang="css" scoped>
+
+.records-overlay {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 50;
+  left: 0;
 }
-ul {
-  list-style-type: none;
-  padding: 0;
+
+.jumbotron-push {
+  margin-top: 50px;
 }
-li {
-  display: inline-block;
-  margin: 0 10px;
+
+.form-new-result .input-group {
+  margin-bottom: 10px;
 }
-a {
-  color: #42b983;
+
+.copy {
+  margin-top: 10px;
+  margin-bottom: 30px;
+  width: 100%;
+  text-align: center;
 }
+
+.btn-spacer {
+  margin-right: 15px;
+}
+
 </style>

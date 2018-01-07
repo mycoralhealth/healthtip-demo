@@ -79,8 +79,8 @@ func checkUserExists(dbCon *sql.DB, u User) (User, error) {
 }
 
 func checkLoginAuth(dbCon *sql.DB, u User) error {
-	var a AuthToken
-	if err := dbCon.QueryRow(`SELECT * FROM users WHERE email = $1 AND password = $2;`, u.Email, u.Password).Scan(&a); err == sql.ErrNoRows {
+	var usr User
+	if err := dbCon.QueryRow(`SELECT * FROM users WHERE email = $1 AND password = $2;`, u.Email, hashPassword(u.Password)).Scan(&usr); err == sql.ErrNoRows {
 		return fmt.Errorf("user not found: %v", u.ID)
 	}
 	return nil

@@ -36,14 +36,14 @@ func handleWriteUser(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 
 	lastID, err := writeUser(dbCon, user)
 	if err != nil {
-		handleError(w, r, http.StatusInternalServerError, err.Error())
+		handleError(w, r, http.StatusUnprocessableEntity, err.Error())
 		return
 	}
 
 	user.ID = int(lastID)
 	auth, err := createAuthToken(user.ID, dbCon)
 	if err != nil {
-		handleError(w, r, http.StatusInternalServerError, err.Error())
+		handleError(w, r, http.StatusUnprocessableEntity, err.Error())
 		return
 	}
 
@@ -112,7 +112,7 @@ func handleLogin(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 		return
 	}
 
-	if err := checkLoginAuth(dbCon, dbUser); err != nil {
+	if err := checkLoginAuth(dbCon, user); err != nil {
 		handleError(w, r, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
