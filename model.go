@@ -2,17 +2,17 @@ package main
 
 // User is stored in DB
 type User struct {
-	ID         int		`json:"id,string,omitempty"`
-	Email      string	`json:"email,omitempty"`
-	First_name string	`json:"firstName,omitempty"`
-	Last_name  string	`json:"lastName,omitempty"`
-	Password   string	`json:"password,omitempty"`
+	ID         int    `json:"id,string,omitempty"`
+	Email      string `json:"email,omitempty"`
+	First_name string `json:"firstName,omitempty"`
+	Last_name  string `json:"lastName,omitempty"`
+	Password   string `json:"password,omitempty"`
 }
 
 // AuthToken is the session token
 type AuthToken struct {
-	Api_user int		`json:"apiUser,string,omitempty"`
-	Api_key  string		`json:"apiKey,omitempty"`
+	Api_user int    `json:"apiUser,string,omitempty"`
+	Api_key  string `json:"apiKey,omitempty"`
 }
 
 // Record is the lab test results of the user
@@ -26,11 +26,10 @@ type Record struct {
 	Blood_pressure int `json:"bloodPressure,string,omitempty"`
 }
 
-// Login result
-
+// LoginResult is the model of an authorized login
 type LoginResult struct {
-	Token          AuthToken 	`json:"token,omitempty"`
-	Email          string		`json:"email,omitempty"`
-	First_name     string		`json:"firstName,omitempty"`
-	Last_name      string		`json:"lastName,omitempty"`
+	Token      AuthToken `json:"token,omitempty"`
+	Email      string    `json:"email,omitempty"`
+	First_name string    `json:"firstName,omitempty"`
+	Last_name  string    `json:"lastName,omitempty"`
 }

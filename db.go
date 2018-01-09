@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"fmt"
-	"log"
 )
 
 func writeUser(dbCon *sql.DB, u User) (int64, error) {
@@ -47,6 +46,16 @@ func checkAPIAuth(dbCon *sql.DB, auth AuthToken) error {
 	return nil
 }
 
+// returnAuthToken fills out the Auth_user if only the Auth_key is available
+func returnAuthUserID(dbCon *sql.DB, auth AuthToken) (int, error) {
+
+	var a AuthToken
+	if err := dbCon.QueryRow(`SELECT * FROM auth_tokens WHERE api_key = $1;`, auth.Api_key).Scan(&a.Api_user, &a.Api_key); err == sql.ErrNoRows {
+		return 0, fmt.Errorf("Incorrect API token for user: %v", auth.Api_user)
+	}
+	return a.Api_user, nil
+}
+
 func deleteAuthToken(dbCon *sql.DB, auth AuthToken) error {
 	_, err := dbCon.Exec(`DELETE FROM auth_tokens WHERE Api_user = $1;`, auth.Api_user)
 
@@ -72,10 +81,18 @@ func checkUserExists(dbCon *sql.DB, u User) (User, error) {
 	if err := dbCon.QueryRow(`SELECT ROWID, * FROM users WHERE email = $1;`, u.Email).Scan(&user.ID, &user.Email, &user.First_name, &user.Last_name, &user.Password); err == sql.ErrNoRows {
 		return user, fmt.Errorf("user not found: %v", u.Email)
 	}
-	log.Println(user.First_name)
 
 	return user, nil
 
+}
+
+func returnUser(dbCon *sql.DB, ID int) (User, error) {
+	var user User
+	if err := dbCon.QueryRow(`SELECT ROWID, * FROM users WHERE ROWID = $1;`, ID).Scan(&user.ID, &user.Email, &user.First_name, &user.Last_name, &user.Password); err == sql.ErrNoRows {
+		return user, fmt.Errorf("user not found: %v", ID)
+	}
+
+	return user, nil
 }
 
 func checkLoginAuth(dbCon *sql.DB, u User) error {
