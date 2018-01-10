@@ -8,8 +8,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/rs/cors"
 	"github.com/gorilla/mux"
+	"github.com/rs/cors"
 )
 
 func run(dbCon *sql.DB) error {
@@ -21,11 +21,11 @@ func run(dbCon *sql.DB) error {
 	log.Println("Listening on ", httpAddr)
 
 	c := cors.New(cors.Options{
-		Debug: true,
+		Debug:          true,
 		AllowedHeaders: []string{"*"},
-		AllowedOrigins: []string{"*"}, // All origins. TODO: we need to make this an env and put localhost in here
+		AllowedOrigins: []string{"*"},                            // All origins. TODO: we need to make this an env and put localhost in here
 		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE"}, // Allowing GET, POST, PUT
-  	})	
+	})
 
 	s := &http.Server{
 		Addr:           ":" + httpAddr,
@@ -51,7 +51,7 @@ func makeMuxRouter(dbCon *sql.DB) http.Handler {
 
 	apiAuth := func(f func(w http.ResponseWriter, r *http.Request, dbCon *sql.DB)) func(w http.ResponseWriter, r *http.Request) {
 		return func(w http.ResponseWriter, r *http.Request) {
-			apiToken, err := getBasicAPIAuth(r);
+			apiToken, err := getBasicAPIAuth(r)
 			if err != nil {
 				handleError(w, r, http.StatusUnauthorized, err.Error())
 				return
@@ -76,6 +76,9 @@ func makeMuxRouter(dbCon *sql.DB) http.Handler {
 	muxRouter.HandleFunc("/api/records/{id:[0-9]+}", apiAuth(handleSingleRecord)).Methods("GET")
 	muxRouter.HandleFunc("/api/records/{id:[0-9]+}", apiAuth(handleSingleRecord)).Methods("PUT")
 	muxRouter.HandleFunc("/api/records/{id:[0-9]+}", apiAuth(handleSingleRecord)).Methods("DELETE")
+	muxRouter.HandleFunc("/resetPassword", wrap(handleResetPassword)).Methods("POST")
+	muxRouter.HandleFunc("/claimToken", wrap(handleClaimToken)).Methods("POST")
+	muxRouter.HandleFunc("/changePassword&{tempkey:[a-zA-Z0-9]+}", wrap(handleChangePassword)).Methods("GET")
 
 	return muxRouter
 }
@@ -86,7 +89,6 @@ func handleError(w http.ResponseWriter, r *http.Request, code int, message strin
 }
 
 func respondWithJSON(w http.ResponseWriter, r *http.Request, code int, payload interface{}) {
-	//w.Header().Set("Content-Type", "application/json")
 	response, err := json.MarshalIndent(payload, "", "  ")
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)

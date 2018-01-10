@@ -5,10 +5,12 @@ import (
 	"database/sql"
 	"encoding/base32"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strconv"
-	"errors"
 
 	"github.com/gorilla/mux"
 )
@@ -97,15 +99,15 @@ func handleUpdateUser(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 }
 
 func handleLogin(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
-	
-	user, err := getBasicLoginAuth(r);
+
+	user, err := getBasicLoginAuth(r)
 
 	if err != nil {
 		handleError(w, r, http.StatusUnauthorized, err.Error())
 		return
 	}
 
-	dbUser, err := checkUserExists(dbCon, user); 
+	dbUser, err := checkUserExists(dbCon, user)
 
 	if err != nil {
 		handleError(w, r, 404, err.Error())
@@ -124,6 +126,84 @@ func handleLogin(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 	}
 
 	respondWithJSON(w, r, http.StatusOK, makeLoginResult(dbUser, auth))
+}
+
+func handleResetPassword(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
+	// request should send user object with just email
+	var user User
+
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&user); err != nil {
+		handleError(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	defer r.Body.Close()
+
+	dbUser, err := checkUserExists(dbCon, user)
+
+	if err != nil {
+		handleError(w, r, 404, err.Error())
+		return
+	}
+
+	auth, err := createAuthToken(dbUser.ID, dbCon)
+	if err != nil {
+		handleError(w, r, http.StatusUnprocessableEntity, err.Error())
+		return
+	}
+
+	// TODO: sendmail function here
+	// url constructor  - load from env
+	url := "http://" + os.Getenv("URL") + "changePassword&" + auth.Api_key
+	fmt.Println(url) // TODO: get rid of this when done
+
+	respondWithJSON(w, r, http.StatusOK, dbUser.Email)
+}
+
+func handleClaimToken(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
+
+	var auth AuthToken
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&auth); err != nil {
+		handleError(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	defer r.Body.Close()
+
+	userID, err := returnAuthUserID(dbCon, auth)
+	if err != nil {
+		handleError(w, r, 404, err.Error())
+		return
+	}
+
+	auth.Api_user = userID
+
+	if err := deleteAuthToken(dbCon, auth); err != nil {
+		handleError(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	user, err := returnUser(dbCon, auth.Api_user)
+	if err != nil {
+		handleError(w, r, 404, err.Error())
+		return
+	}
+
+	newAuth, err := createAuthToken(user.ID, dbCon)
+	if err != nil {
+		handleError(w, r, http.StatusUnprocessableEntity, err.Error())
+		return
+	}
+
+	respondWithJSON(w, r, http.StatusOK, makeLoginResult(user, newAuth))
+}
+
+func handleChangePassword(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
+
+	vars := mux.Vars(r)
+	tempKey := vars["tempkey"]
+
+	respondWithJSON(w, r, http.StatusOK, tempKey)
 }
 
 func getBasicLoginAuth(r *http.Request) (User, error) {
@@ -149,12 +229,12 @@ func getBasicAPIAuth(r *http.Request) (AuthToken, error) {
 
 	p, s, ok := r.BasicAuth()
 	if !ok {
-		return token, errors.New("Invalid API Authorization token. Required Basic Api_user:Api_key.")
+		return token, errors.New("invalid API Authorization token. Required Basic Api_user:Api_key")
 	}
 
 	apiUser, err := strconv.Atoi(p)
 	if err != nil {
-		return token, errors.New("Invalid Api_user.")
+		return token, errors.New("invalid Api_user")
 	}
 
 	token.Api_user = apiUser
@@ -164,7 +244,7 @@ func getBasicAPIAuth(r *http.Request) (AuthToken, error) {
 }
 
 func handleLogout(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
-	auth, _ := getBasicAPIAuth(r);
+	auth, _ := getBasicAPIAuth(r)
 
 	if err := deleteAuthToken(dbCon, auth); err != nil {
 		handleError(w, r, http.StatusInternalServerError, err.Error())
@@ -175,7 +255,7 @@ func handleLogout(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 }
 
 func handleRecords(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
-	auth, _ := getBasicAPIAuth(r);
+	auth, _ := getBasicAPIAuth(r)
 
 	if r.Method == "GET" {
 		records, err := getAllRecords(auth.Api_user, dbCon)
