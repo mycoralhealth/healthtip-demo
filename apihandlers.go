@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"strconv"
 	"errors"
+	"time"
+	"os"
 
 	"github.com/gorilla/mux"
 )
@@ -87,8 +89,11 @@ func handleUpdateUser(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 	}
 	defer r.Body.Close()
 
+	auth, _ := getBasicAPIAuth(r);
+	user.ID = auth.Api_user
+
 	if err := updateUser(dbCon, user); err != nil {
-		handleError(w, r, http.StatusInternalServerError, err.Error())
+		handleError(w, r, http.StatusUnprocessableEntity, err.Error())
 		return
 	}
 
@@ -261,4 +266,61 @@ func handleSingleRecord(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 
 		respondWithJSON(w, r, http.StatusOK, record)
 	}
+}
+
+func handleRecordTip(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
+	vars := mux.Vars(r)
+	ID, err := strconv.Atoi(vars["id"])
+
+	if err != nil {
+		handleError(w, r, http.StatusNotFound, err.Error())
+		return
+	}
+
+	record, err := getRecord(dbCon, ID)
+	if err != nil {
+		handleError(w, r, http.StatusUnprocessableEntity, err.Error())
+		return
+	}
+
+	if record.Tip_sent != 0 {
+		handleError(w, r, http.StatusUnprocessableEntity, "You cannot request a tip on the same record more than once.")
+		return
+	}
+
+	auth, _ := getBasicAPIAuth(r);
+
+	dbUser, err := getUserForId(dbCon, auth.Api_user); 
+
+	if err != nil {
+		handleError(w, r, 404, err.Error())
+		return
+	}
+
+	now := time.Now()
+
+	if dbUser.Last_tip != 0 {
+		secs := now.Unix()
+		interval, err := strconv.ParseInt(os.Getenv("TIP_INTERVAL"), 10, 64)
+
+		if err != nil {
+			handleError(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		if secs < (dbUser.Last_tip + interval) {
+			handleError(w, r, http.StatusUnprocessableEntity, "You cannot only request one Health Tip in 24 hours.")
+			return
+		}
+	}
+
+	// TODO: Email, if there's an error bail before you update the records
+
+	dbUser.Last_tip = now.Unix()
+	updateUserTipTime(dbCon, dbUser)
+
+	record.Tip_sent = 1
+	updateRecord(dbCon, record)
+
+	respondWithJSON(w, r, http.StatusOK, record)
 }
