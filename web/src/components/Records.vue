@@ -80,7 +80,7 @@
                 </tr>
               </thead>
               <tbody v-for="(r, index) in records">
-                <tr>
+                <tr class="">
                   <th scope="row">{{ r.age }}</th>
                   <td>{{ r.height }}</td>
                   <td>{{ r.weight }}</td>
@@ -93,7 +93,7 @@
                 </tr>
               </tbody>
             </table>
-
+            <div class="list-end"></div>
           </div>
         </div>
 
@@ -179,6 +179,8 @@ export default {
     appendRecordResult(req) {
       this.loading = false
       this.records.push(req.data)
+      var container = this.$el.querySelector(".list-end")
+      container.scrollIntoView()
     },
 
     removeRecordFromResult(index) {
@@ -192,6 +194,8 @@ export default {
     reportError(err) {
       this.loading = false
       this.error = err
+      var container = this.$el.querySelector(".container")
+      container.scrollIntoView()
     },
 
     loadAPIError() {
