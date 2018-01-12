@@ -293,7 +293,7 @@ func handleRecordTip(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 	dbUser, err := getUserForId(dbCon, auth.Api_user); 
 
 	if err != nil {
-		handleError(w, r, 404, err.Error())
+		handleError(w, r, http.StatusNotFound, err.Error())
 		return
 	}
 
@@ -314,7 +314,12 @@ func handleRecordTip(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 		}
 	}
 
-	// TODO: Email, if there's an error bail before you update the records
+	mailErr := emailHealthTipRequest(dbUser, record)
+
+	if mailErr != nil {
+		handleError(w, r, http.StatusUnprocessableEntity, "Unable to send email. Please contact Coral Health.")
+		return
+	}
 
 	dbUser.Last_tip = now.Unix()
 	updateUserTipTime(dbCon, dbUser)

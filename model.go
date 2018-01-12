@@ -29,7 +29,6 @@ type Record struct {
 }
 
 // Login result
-
 type LoginResult struct {
 	Token          AuthToken 	`json:"token,omitempty"`
 	Email          string		`json:"email,omitempty"`
