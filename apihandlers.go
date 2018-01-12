@@ -12,7 +12,6 @@ import (
 	"os"
 	"strconv"
 	"time"
-	"os"
 
 	"github.com/gorilla/mux"
 )

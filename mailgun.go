@@ -20,7 +20,7 @@ func emailHealthTipRequest(user User, record Record) error {
 	message := mg.NewMessage(
 	    "Health Tips <no-reply@mail.mycoralhealth.com>",
 	    "New Health Tip Request",
-	    "Hello, we received a new Health Tip request, details as follows.\nUser: " + user.First_name + " " + user.Last_name +
+	    "Hello, we received a new Health Tip request. Details as follows.\n\nUser: " + user.First_name + " " + user.Last_name +
 	    "\nEmail: " + user.Email + "\n" +
 	    "Test result details: \n" + 
 	    "  Age: " + strconv.Itoa(record.Age) + "\n" + 
