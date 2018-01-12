@@ -7,6 +7,7 @@ type User struct {
 	First_name string `json:"firstName,omitempty"`
 	Last_name  string `json:"lastName,omitempty"`
 	Password   string `json:"password,omitempty"`
+	Last_tip   int64	`json:"lastTipEpoch,omitempty"`
 }
 
 // AuthToken is the session token
@@ -24,6 +25,7 @@ type Record struct {
 	Weight         int `json:"weight,string,omitempty"`
 	Cholesterol    int `json:"cholesterol,string,omitempty"`
 	Blood_pressure int `json:"bloodPressure,string,omitempty"`
+	Tip_sent       int `json:"tipSent,string,omitempty"`
 }
 
 // LoginResult is the model of an authorized login

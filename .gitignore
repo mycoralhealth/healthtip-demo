@@ -3,3 +3,5 @@
 *.swp
 coral.db*
 *.bak
+sendtestemail.sh
+test.sh

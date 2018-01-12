@@ -16,7 +16,12 @@
         <div class="row">
           <div class="col-md-4">
             <h2>Add Test Result</h2>
-              <div class="alert alert-danger" v-if="error">{{ error }}</div>
+              <div class="alert alert-danger alert-dismissible" v-if="error">
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close" v-on:click="dismissError()">
+                  <span aria-hidden="true">&times;</span>
+                </button>
+                {{ error }}
+              </div>
               <form class="form-new-result" @submit.prevent="addRecord">
                 <div class="form-group">
                   <label for="inputAge" class="sr-only">Age</label>
@@ -75,7 +80,7 @@
                 </tr>
               </thead>
               <tbody v-for="(r, index) in records">
-                <tr>
+                <tr class="">
                   <th scope="row">{{ r.age }}</th>
                   <td>{{ r.height }}</td>
                   <td>{{ r.weight }}</td>
@@ -84,11 +89,11 @@
                   <td><a href="#" v-on:click="deleteRecord(index)"><i class="fa fa-trash-o"></i></a></td>
                 </tr>
                 <tr class="text-left">
-                  <td colspan="6"><button type="button" class="btn btn-outline-success" v-on:click="requestTip(index)">Request Tip</button><br><br></td>
+                  <td colspan="6"><button type="button" class="btn btn-outline-secondary disabled" v-if="r.tipSent == 1">Tip Requested</button><button type="button" class="btn btn-outline-success" v-else="r.tipSent == 1" v-on:click="requestTip(index)">Request Tip</button><br><br></td>
                 </tr>
               </tbody>
             </table>
-
+            <div class="list-end"></div>
           </div>
         </div>
 
@@ -117,7 +122,7 @@ export default {
   },
   data () {
     return {
-      record: { age: '', height: '', weight: '', cholesterol: '', bloodPressure: '' },
+      record: { age: '', height: '', weight: '', cholesterol: '', bloodPressure: ''},
       records: [],
       loading: false,
       error: false
@@ -146,7 +151,7 @@ export default {
       if (this.record.age.trim()) {
         this.$http.post('/api/records', this.record, {headers: {'Authorization': this.currentUser.getAuth()}})
           .then(request => this.appendRecordResult(request))
-          .catch(err => this.reportError(err))
+          .catch(err => this.reportError(err.response.data))
       }
     },
 
@@ -156,7 +161,7 @@ export default {
       let confirmFn = function() {
         that.$http.delete('api/records/' + that.records[index].id, {headers: {'Authorization': that.currentUser.getAuth()}})
           .then(() => that.removeRecordFromResult(index))
-          .catch(err => that.reportError(err))
+          .catch(err => that.reportError(err.response.data))
       }
 
       let obj = {
@@ -174,6 +179,8 @@ export default {
     appendRecordResult(req) {
       this.loading = false
       this.records.push(req.data)
+      var container = this.$el.querySelector(".list-end")
+      container.scrollIntoView()
     },
 
     removeRecordFromResult(index) {
@@ -186,6 +193,9 @@ export default {
 
     reportError(err) {
       this.loading = false
+      this.error = err
+      var container = this.$el.querySelector(".container")
+      container.scrollIntoView()
     },
 
     loadAPIError() {
@@ -194,12 +204,23 @@ export default {
     },
 
     requestTip(index) {
+      this.$http.post('/api/records/' + this.records[index].id + '/tip', null, {headers: {'Authorization': this.currentUser.getAuth()}})
+        .then(req => this.requestTipSuccess(req.data, index))
+        .catch(err => this.reportError(err.response.data))
+    },
+
+    requestTipSuccess(record, index) {
+      this.records.splice(index, 1, record)
       let obj = {
           title: 'Request Sent',
           message: 'Your request for Health Tip was just sent to a group of medical professionals. You should receive a reponse in the next 24 hours.',
           type: 'success'
       }
       this.$refs.simplert.openSimplert(obj)
+    },
+
+    dismissError() {
+      this.error = false
     }
   }
 }
