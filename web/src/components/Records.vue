@@ -26,18 +26,18 @@
                 <div class="form-group">
                   <label for="inputAge" class="sr-only">Age</label>
                   <div class="input-group">
-                    <input type="number" min="0" step="1" id="inputAge" class="form-control" placeholder="Age" v-model="record.age" required>
+                    <input type="number" min="1" max="150" step="1" id="inputAge" class="form-control" placeholder="Age" v-model="record.age" required>
                   </div>
                   <label for="inputHeight" class="sr-only">Height</label>
                   <div class="input-group">
-                    <input type="number" min="0" class="form-control" id="inputHeight" placeholder="Height" v-model="record.height" required>
+                    <input type="number" min="0" max="300" class="form-control" id="inputHeight" placeholder="Height" v-model="record.height" required>
                     <div class="input-group-append">
                       <span class="input-group-text">cm</span>
                     </div>
                   </div>
                   <label for="inputWeight" class="sr-only">Weight</label>
                   <div class="input-group">
-                    <input type="number" min="0" class="form-control" id="inputWeight" placeholder="Weight" v-model="record.weight" required>
+                    <input type="number" min="0" max="1000" class="form-control" id="inputWeight" placeholder="Weight" v-model="record.weight" required>
                     <div class="input-group-append">
                       <span class="input-group-text">kg</span>
                     </div>

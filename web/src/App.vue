@@ -32,7 +32,8 @@ export default {
   },
   methods: {
     checkCurrentLogin () {
-      if (!this.currentUser && (this.$route.path !== '/') && (this.$route.path !== '/signup')) {
+      var unprotectedRoutes = ['/', '/signup', '/forgot', '/changePassword']
+      if (!this.currentUser && (unprotectedRoutes.indexOf(this.$route.path) < 0)) {
         this.$router.push('/')
       }
     }
