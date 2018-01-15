@@ -26,8 +26,8 @@
         <input v-model="email" type="email" id="inputEmail" class="form-control" placeholder="Email address" required>
 
         <label for="inputPassword" class="sr-only">Password</label>
-        <input v-model="password" type="password" id="inputPassword" class="form-control" placeholder="Password" required>
-        <label for="inputConfirmPassword" class="sr-only">Confirm passwordk</label>
+        <input v-model="password" type="password" id="inputPassword" class="form-control" placeholder="Password (minimum length 6 characters)" required>
+        <label for="inputConfirmPassword" class="sr-only">Confirm password</label>
         <input v-model="confirmPassword" type="password" id="inputConfirmPassword" class="form-control" placeholder="Confirm Password" required>
 
         <button class="btn btn-lg btn-primary btn-block" :disabled="loading" type="submit"><i class="fa fa-refresh fa-spin" v-if="loading"></i><div v-else="loading">Sign-up for Health Tip</div></button>
@@ -77,6 +77,11 @@ export default {
       }
     },
     signup () {
+      if (!this.password || this.password.length < 6) {
+        this.signupFailed('Required password length of 6 or more characters')
+        return        
+      }
+
       if (this.password !== this.confirmPassword) {
         this.signupFailed('The password doesn\'t match the confirmation')
         return

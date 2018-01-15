@@ -4,6 +4,8 @@ import Login from '@/components/Login'
 import Records from '@/components/Records'
 import Logout from '@/components/Logout'
 import Signup from '@/components/Signup'
+import Forgot from '@/components/Forgot'
+import ChangePassword from '@/components/ChangePassword'
 
 Vue.use(Router)
 
@@ -29,6 +31,16 @@ export default new Router({
       path: '/signup',
       name: 'Signup',
       component: Signup
-    }
+    },
+    {
+      path: '/forgot',
+      name: 'Forgot',
+      component: Forgot
+    },
+    {
+      path: '/changePassword',
+      name: 'ChangePassword',
+      component: ChangePassword
+    }    
   ]
 })

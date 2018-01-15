@@ -51,7 +51,7 @@ func returnAuthUserID(dbCon *sql.DB, auth AuthToken) (int, error) {
 
 	var a AuthToken
 	if err := dbCon.QueryRow(`SELECT * FROM auth_tokens WHERE api_key = $1;`, auth.Api_key).Scan(&a.Api_user, &a.Api_key); err == sql.ErrNoRows {
-		return 0, fmt.Errorf("Incorrect API token for user: %v", auth.Api_user)
+		return 0, fmt.Errorf("Invalid token")
 	}
 	return a.Api_user, nil
 }
@@ -86,19 +86,28 @@ func updateUserTipTime(dbCon *sql.DB, u User) error {
 	return nil
 }
 
+func updateUserPassword(dbCon *sql.DB, u User) error {
+
+	_, err := dbCon.Exec(`UPDATE users SET password = $1 WHERE ROWID = $2 ;`, hashPassword(u.Password), u.ID)
+	if err != nil {
+		return fmt.Errorf("couldn't update %v in users table: %v", u.Email, err)
+	}
+
+	return nil
+}
+
 func checkUserExists(dbCon *sql.DB, u User) (User, error) {
 	var user User
 	if err := dbCon.QueryRow(`SELECT ROWID, email, first_name, last_name, password FROM users WHERE email = $1;`, u.Email).Scan(&user.ID, &user.Email, &user.First_name, &user.Last_name, &user.Password); err == sql.ErrNoRows {
-		return user, fmt.Errorf("user not found: %v", u.Email)
+		return user, fmt.Errorf("The account doesn't exit: %v", u.Email)
 	}
 
 	return user, nil
-
 }
 
-func returnUser(dbCon *sql.DB, ID int) (User, error) {
+func findUser(dbCon *sql.DB, ID int) (User, error) {
 	var user User
-	if err := dbCon.QueryRow(`SELECT ROWID, * FROM users WHERE ROWID = $1;`, ID).Scan(&user.ID, &user.Email, &user.First_name, &user.Last_name, &user.Password); err == sql.ErrNoRows {
+	if err := dbCon.QueryRow(`SELECT ROWID, email, first_name, last_name FROM users WHERE ROWID = $1;`, ID).Scan(&user.ID, &user.Email, &user.First_name, &user.Last_name); err == sql.ErrNoRows {
 		return user, fmt.Errorf("user not found: %v", ID)
 	}
 

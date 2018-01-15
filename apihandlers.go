@@ -6,12 +6,12 @@ import (
 	"encoding/base32"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"strconv"
 	"time"
+	"net/url"
 
 	"github.com/gorilla/mux"
 )
@@ -36,6 +36,11 @@ func handleWriteUser(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 		return
 	}
 	defer r.Body.Close()
+
+	if len(user.Password) < 6 {
+		handleError(w, r, http.StatusUnprocessableEntity, "Minimum password length is 6 characters")
+		return		
+	}
 
 	lastID, err := writeUser(dbCon, user)
 	if err != nil {
@@ -99,7 +104,6 @@ func handleUpdateUser(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 	}
 
 	respondWithJSON(w, r, http.StatusCreated, user.Email)
-
 }
 
 func handleLogin(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
@@ -132,6 +136,28 @@ func handleLogin(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 	respondWithJSON(w, r, http.StatusOK, makeLoginResult(dbUser, auth))
 }
 
+func handleChangePassword(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
+	auth, _ := getBasicAPIAuth(r)
+
+	var user User
+
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&user); err != nil {
+		handleError(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	defer r.Body.Close()
+
+	user.ID = auth.Api_user
+	err := updateUserPassword(dbCon, user)
+	if  err != nil {
+		handleError(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	respondWithJSON(w, r, http.StatusNoContent, nil)
+}
+
 func handleResetPassword(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 	// request should send user object with just email
 	var user User
@@ -156,12 +182,10 @@ func handleResetPassword(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) 
 		return
 	}
 
-	// TODO: sendmail function here
-	// url constructor  - load from env
-	url := "http://" + os.Getenv("URL") + "changePassword&" + auth.Api_key
-	fmt.Println(url) // TODO: get rid of this when done
+	url := os.Getenv("CLIENT_URL") + "changePassword?token=" + url.QueryEscape(auth.Api_key)
+	emailPasswordReset(dbUser, url)
 
-	respondWithJSON(w, r, http.StatusOK, dbUser.Email)
+	respondWithJSON(w, r, http.StatusNoContent, nil)
 }
 
 func handleClaimToken(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
@@ -187,7 +211,7 @@ func handleClaimToken(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 		return
 	}
 
-	user, err := returnUser(dbCon, auth.Api_user)
+	user, err := findUser(dbCon, userID)
 	if err != nil {
 		handleError(w, r, 404, err.Error())
 		return
@@ -200,14 +224,6 @@ func handleClaimToken(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 	}
 
 	respondWithJSON(w, r, http.StatusOK, makeLoginResult(user, newAuth))
-}
-
-func handleChangePassword(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
-
-	vars := mux.Vars(r)
-	tempKey := vars["tempkey"]
-
-	respondWithJSON(w, r, http.StatusOK, tempKey)
 }
 
 func getBasicLoginAuth(r *http.Request) (User, error) {

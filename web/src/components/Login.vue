@@ -10,6 +10,7 @@
         <label for="inputPassword" class="sr-only">Password</label>
         <input v-model="password" type="password" id="inputPassword" class="form-control" placeholder="Password" required>
         <button class="btn btn-lg btn-primary btn-block" :disabled="loading" type="submit"><i class="fa fa-refresh fa-spin" v-if="loading"></i><div v-else="loading">Sign-in</div></button>
+        <small><a href="/forgot">I forgot my password</a></small>
 
         <p class="sign-up">
           Not a member yet?

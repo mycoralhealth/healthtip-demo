@@ -42,3 +42,33 @@ func emailHealthTipRequest(user User, record Record) error {
 
 	return nil
 }
+
+func emailPasswordReset(user User, url string) error {
+
+	log.Println(os.Getenv("MG_DOMAIN"))
+	log.Println(os.Getenv("MG_API_KEY"))
+	log.Println(os.Getenv("MG_PUBLIC_API_KEY"))
+
+	mailgun.Debug = true
+
+	mg := mailgun.NewMailgun(os.Getenv("MG_DOMAIN"), os.Getenv("MG_API_KEY"), "")
+	message := mg.NewMessage(
+		"Health Tips <no-reply@mail.mycoralhealth.com>",
+		"Password Reset Request",
+		"Hello " + user.First_name + " " + user.Last_name + ",\n" +
+		"\nWe received a password reset request for your account at My Coral Health - Health Tips\n" +
+		"To reset your password please click here: " + url + " \n" + 
+		"\nIf this wasn't you or you clicked on the reset password link in error, please disregard this message.\n\nThe My Coral Health Team",
+		user.Email)
+	
+	resp, id, err := mg.Send(message)
+	
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	fmt.Printf("ID: %s Resp: %s\n", id, resp)
+
+	return nil
+}
