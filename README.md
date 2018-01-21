@@ -1,6 +1,8 @@
-# healthtip-demo
+#healthtip-demo
 
 MVP of a patient receiving customized health tips
+
+Try it [here](https://tips.mycoralhealth.com)
 
 Next iteration of our current [lab result demo](https://github.com/mycoralhealth/labresults-demo)
 

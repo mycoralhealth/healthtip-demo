@@ -2,7 +2,7 @@
 
 import axios from 'axios'
 
-const API_URL = process.env.API_URL || 'https://mycoralhealth.io/'
+const API_URL = process.env.API_URL || 'https://tips.mycoralhealth.com/'
 
 export default axios.create({
   baseURL: API_URL,
