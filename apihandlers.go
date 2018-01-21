@@ -182,7 +182,7 @@ func handleResetPassword(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) 
 		return
 	}
 
-	url := os.Getenv("CLIENT_URL") + "changePassword?token=" + url.QueryEscape(auth.Api_key)
+	url := os.Getenv("CLIENT_URL") + "changePass?token=" + url.QueryEscape(auth.Api_key)
 	emailPasswordReset(dbUser, url)
 
 	respondWithJSON(w, r, http.StatusNoContent, nil)

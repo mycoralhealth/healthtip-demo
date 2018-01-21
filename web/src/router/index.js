@@ -38,9 +38,9 @@ export default new Router({
       component: Forgot
     },
     {
-      path: '/changePassword',
+      path: '/changePass',
       name: 'ChangePassword',
       component: ChangePassword
-    }    
+    }
   ]
 })
