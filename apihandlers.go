@@ -8,10 +8,10 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"time"
-	"net/url"
 
 	"github.com/gorilla/mux"
 )
@@ -39,7 +39,7 @@ func handleWriteUser(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 
 	if len(user.Password) < 6 {
 		handleError(w, r, http.StatusUnprocessableEntity, "Minimum password length is 6 characters")
-		return		
+		return
 	}
 
 	lastID, err := writeUser(dbCon, user)
@@ -95,7 +95,7 @@ func handleUpdateUser(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 	}
 	defer r.Body.Close()
 
-	auth, _ := getBasicAPIAuth(r);
+	auth, _ := getBasicAPIAuth(r)
 	user.ID = auth.Api_user
 
 	if err := updateUser(dbCon, user); err != nil {
@@ -150,7 +150,7 @@ func handleChangePassword(w http.ResponseWriter, r *http.Request, dbCon *sql.DB)
 
 	user.ID = auth.Api_user
 	err := updateUserPassword(dbCon, user)
-	if  err != nil {
+	if err != nil {
 		handleError(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -379,13 +379,13 @@ func handleRecordTip(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 	}
 
 	if record.Tip_sent != 0 {
-		handleError(w, r, http.StatusUnprocessableEntity, "You cannot request a tip on the same record more than once.")
+		handleError(w, r, http.StatusUnprocessableEntity, "You can only request a tip on the same record once.")
 		return
 	}
 
-	auth, _ := getBasicAPIAuth(r);
+	auth, _ := getBasicAPIAuth(r)
 
-	dbUser, err := getUserForId(dbCon, auth.Api_user); 
+	dbUser, err := getUserForId(dbCon, auth.Api_user)
 
 	if err != nil {
 		handleError(w, r, http.StatusNotFound, err.Error())
@@ -404,7 +404,7 @@ func handleRecordTip(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 		}
 
 		if secs < (dbUser.Last_tip + interval) {
-			handleError(w, r, http.StatusUnprocessableEntity, "You cannot only request one Health Tip in 24 hours.")
+			handleError(w, r, http.StatusUnprocessableEntity, "You can only request one Health Tip every 24 hours.")
 			return
 		}
 	}

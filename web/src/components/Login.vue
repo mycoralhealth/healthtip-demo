@@ -3,7 +3,7 @@
     <div class="login-wrapper border border-light">
       <form class="form-signin" @submit.prevent="login">
         <img class="logo" src="../assets/logo.png">
-        <h2 class="form-signin-heading">Health Tip</h2>
+        <h2 class="form-signin-heading">Health Tips</h2>
         <div class="alert alert-danger" v-if="error">{{ error }}</div>
         <label for="inputEmail" class="sr-only">Email address</label>
         <input v-model="email" type="email" id="inputEmail" class="form-control" placeholder="Email address" required autofocus>
@@ -104,7 +104,7 @@ body {
 .login-wrapper {
   width: 400px;
   min-width: 260px;
-  max-width: 400px;  
+  max-width: 400px;
   background: white;
   background-color: white;
   margin: 12% auto;
@@ -135,7 +135,7 @@ body {
   width: 100%;
 }
 
-.form-signin, 
+.form-signin,
 .form-signin .checkbox {
   margin-bottom: 10px;
 }

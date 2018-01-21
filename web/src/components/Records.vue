@@ -4,10 +4,10 @@
       <!-- Main jumbotron for a primary marketing message or call to action -->
       <div class="jumbotron jumbotron-push">
         <div class="container">
-          <h1 class="display-3">Hello, welcome to Health Tips!</h1>
-          <p>We at Coral Health are working on the future of the healthcare ecosystem. This is a demo app to illustrate how anyone can get
-          personalized health tips easily with a full fledged decentralized medical records system. Start by adding some test records.</p>
-          <p><a class="btn btn-primary btn-lg" href="https://www.mycoralhealth.com" role="button">Learn more &raquo;</a></p>
+          <h1 class="display-3">Welcome to Health Tips!</h1>
+          <p>We, at Coral Health, are using the Blockchain to improve the state of healthcare. This is a demo app to illustrate how anyone can get
+          personalized health tips easily through a full-fledged decentralized medical records system. Start by watching the tutorial and adding some test records.</p>
+          <p><a class="btn btn-primary btn-lg" href="https://www.mycoralhealth.com" target="_blank" role="button">Tutorial &raquo;</a></p>
         </div>
       </div>
 
@@ -42,18 +42,18 @@
                       <span class="input-group-text">kg</span>
                     </div>
                   </div>
-                  <label for="inputCholesterol" class="sr-only">Cholesterol</label>
+                  <label for="inputCholesterol" class="sr-only">Heart Rate</label>
                   <div class="input-group">
-                    <input type="number" min="0" class="form-control" id="inputCholesterol" placeholder="Cholesterol" v-model="record.cholesterol" required>
+                    <input type="number" min="0" class="form-control" id="inputCholesterol" placeholder="Heart Rate: beats/minute" v-model="record.cholesterol" required>
                     <div class="input-group-append">
-                      <span class="input-group-text">mg/dL</span>
+                      <span class="input-group-text">bpm</span>
                     </div>
                   </div>
-                  <label for="inputBloodPressure" class="sr-only">Blood pressure</label>
+                  <label for="inputBloodPressure" class="sr-only">Respiratory Rate</label>
                   <div class="input-group">
-                    <input type="number" min="0" class="form-control" id="inputBloodPressure" placeholder="Blood Pressure" v-model="record.bloodPressure" required>
+                    <input type="number" min="0" class="form-control" id="inputBloodPressure" placeholder="Breath Rate: breaths/minute" v-model="record.bloodPressure" required>
                     <div class="input-group-append">
-                      <span class="input-group-text">mmHg</span>
+                      <span class="input-group-text">bpm</span>
                     </div>
                   </div>
 
@@ -74,8 +74,8 @@
                   <th>Age</th>
                   <th>Height (cm)</th>
                   <th>Weight (kg)</th>
-                  <th>Cholesterol (mg/dL)</th>
-                  <th>Blood Pressure (mmHg)</th>
+                  <th>Heart Rate (bpm)</th>
+                  <th>Breath Rate (bpm)</th>
                   <th></th>
                 </tr>
               </thead>
@@ -213,7 +213,7 @@ export default {
       this.records.splice(index, 1, record)
       let obj = {
           title: 'Request Sent',
-          message: 'Your request for Health Tip was just sent to a group of medical professionals. You should receive a reponse in the next 24 hours.',
+          message: 'Your request for a Health Tip was sent. You should receive a reponse in the next 48 hours.',
           type: 'success'
       }
       this.$refs.simplert.openSimplert(obj)

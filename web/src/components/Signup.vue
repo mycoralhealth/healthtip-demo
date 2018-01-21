@@ -30,7 +30,7 @@
         <label for="inputConfirmPassword" class="sr-only">Confirm password</label>
         <input v-model="confirmPassword" type="password" id="inputConfirmPassword" class="form-control" placeholder="Confirm Password" required>
 
-        <button class="btn btn-lg btn-primary btn-block" :disabled="loading" type="submit"><i class="fa fa-refresh fa-spin" v-if="loading"></i><div v-else="loading">Sign-up for Health Tip</div></button>
+        <button class="btn btn-lg btn-primary btn-block" :disabled="loading" type="submit"><i class="fa fa-refresh fa-spin" v-if="loading"></i><div v-else="loading">Sign-up for Health Tips</div></button>
 
         <p class="sign-in">
           Already a member?
@@ -79,7 +79,7 @@ export default {
     signup () {
       if (!this.password || this.password.length < 6) {
         this.signupFailed('Required password length of 6 or more characters')
-        return        
+        return
       }
 
       if (this.password !== this.confirmPassword) {
@@ -88,9 +88,9 @@ export default {
       }
 
       this.loading = true
-      this.$http.post('/users', 
+      this.$http.post('/users',
         {
-          "email" : this.email, 
+          "email" : this.email,
           "password" : this.password,
           "firstName" : this.firstName,
           "lastName" : this.lastName
@@ -141,7 +141,7 @@ body {
 
 .signup-wrapper {
   min-width: 400px;
-  max-width: 510px;  
+  max-width: 510px;
   background: white;
   background-color: white;
   width: 70%;
@@ -179,7 +179,7 @@ body {
   width: 100%;
 }
 
-.form-signup, 
+.form-signup,
 .form-signup .checkbox {
   margin-bottom: 10px;
 }
