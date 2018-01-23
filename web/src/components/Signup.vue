@@ -24,6 +24,8 @@
 
         <label for="inputEmail" class="sr-only">Email address</label>
         <input v-model="email" type="email" id="inputEmail" class="form-control" placeholder="Email address" required>
+        <label for="inputConfirmEmail" class="sr-only">Confirm email address</label>
+        <input v-model="confirmEmail" type="email" id="inputConfirmEmail" class="form-control" placeholder="Confirm email address" required>
 
         <label for="inputPassword" class="sr-only">Password</label>
         <input v-model="password" type="password" id="inputPassword" class="form-control" placeholder="Password (minimum length 6 characters)" required>
@@ -55,6 +57,7 @@ export default {
       firstName: '',
       lastName: '',
       email: '',
+      confirmEmail: '',
       password: '',
       confirmPassword: '',
       error: false,
@@ -79,6 +82,11 @@ export default {
     signup () {
       if (!this.password || this.password.length < 6) {
         this.signupFailed('Required password length of 6 or more characters')
+        return
+      }
+
+      if (this.email !== this.confirmEmail) {
+        this.signupFailed('The email doesn\'t match the confirmation')
         return
       }
 
