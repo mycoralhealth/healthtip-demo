@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"time"
+	"strings"
 
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
@@ -20,10 +21,14 @@ func run(dbCon *sql.DB) error {
 
 	log.Println("Listening on ", httpAddr)
 
+	corsSites := strings.Split(os.Getenv("CROSS_ORIGIN"), ",")
+
+	log.Println("Cross origin sites set to: ", corsSites)
+
 	c := cors.New(cors.Options{
 		Debug:          true,
 		AllowedHeaders: []string{"*"},
-		AllowedOrigins: []string{"*"},                            // All origins. TODO: we need to make this an env and put localhost in here
+		AllowedOrigins: corsSites,
 		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE"}, // Allowing GET, POST, PUT
 	})
 

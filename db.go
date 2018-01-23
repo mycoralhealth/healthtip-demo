@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"fmt"
+	"strings"
 )
 
 func writeUser(dbCon *sql.DB, u User) (int64, error) {
@@ -98,7 +99,7 @@ func updateUserPassword(dbCon *sql.DB, u User) error {
 
 func checkUserExists(dbCon *sql.DB, u User) (User, error) {
 	var user User
-	if err := dbCon.QueryRow(`SELECT ROWID, email, first_name, last_name, password FROM users WHERE email = $1;`, u.Email).Scan(&user.ID, &user.Email, &user.First_name, &user.Last_name, &user.Password); err == sql.ErrNoRows {
+	if err := dbCon.QueryRow(`SELECT ROWID, email, first_name, last_name, password FROM users WHERE email = $1;`, strings.ToLower(u.Email)).Scan(&user.ID, &user.Email, &user.First_name, &user.Last_name, &user.Password); err == sql.ErrNoRows {
 		return user, fmt.Errorf("The account doesn't exit: %v", u.Email)
 	}
 
@@ -125,7 +126,7 @@ func getUserForId(dbCon *sql.DB, user_id int) (User, error) {
 
 func checkLoginAuth(dbCon *sql.DB, u User) error {
 	var usr User
-	if err := dbCon.QueryRow(`SELECT * FROM users WHERE email = $1 AND password = $2;`, u.Email, hashPassword(u.Password)).Scan(&usr); err == sql.ErrNoRows {
+	if err := dbCon.QueryRow(`SELECT * FROM users WHERE email = $1 AND password = $2;`, strings.ToLower(u.Email), hashPassword(u.Password)).Scan(&usr); err == sql.ErrNoRows {
 		return fmt.Errorf("user not found: %v", u.ID)
 	}
 	return nil
