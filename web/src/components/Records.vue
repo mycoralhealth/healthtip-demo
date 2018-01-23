@@ -176,7 +176,16 @@ export default {
       this.$refs.simplert.openSimplert(obj)
     },
 
+    clearExistingRecord() {
+      this.record.age = ''
+      this.record.height = ''
+      this.record.weight = '' 
+      this.record.cholesterol = ''
+      this.record.bloodPressure = ''
+    },
+
     appendRecordResult(req) {
+      this.clearExistingRecord();
       this.loading = false
       this.records.push(req.data)
       var container = this.$el.querySelector(".list-end")
@@ -241,9 +250,7 @@ export default {
   left: 0;
 }
 
-.jumbotron-push {
-  margin-top: 50px;
-}
+.jumbotron-push { margin-top: 50px; }
 
 .form-new-result .input-group {
   margin-bottom: 10px;

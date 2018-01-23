@@ -3,7 +3,9 @@
     
     <span class="navbar-left logo"><img style="width: 85px; float: left" src="../assets/logo_small.png"></img><h4 class="navbar-text title text-muted">CORAL HEALTH</h4></span>
     <span class="navbar-text">
-      {{ currentUser.firstName }}&nbsp;{{ currentUser.lastName }}
+      <div class="name">
+        {{ currentUser.firstName }}&nbsp;{{ currentUser.lastName }}
+      </div>
       <router-link to="/logout" class="btn btn-logout btn-sm">Logout</router-link>
     </span>
 
@@ -22,6 +24,14 @@ export default {
 </script>
 
 <style lang="css" scoped>
+
+@media screen and (max-width: 550px) {
+  .name { display: none; }
+}
+
+@media screen and (min-width: 550px) {
+  .name { display: inline; }
+}
 
 .logo {
   margin-top: 5px; 
