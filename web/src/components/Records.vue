@@ -6,8 +6,7 @@
         <div class="container">
           <h1 class="display-3">Welcome to Health Tips!</h1>
           <p>We, at Coral Health, are using the Blockchain to improve the state of healthcare. This is a demo app to illustrate how anyone can get
-          personalized health tips easily through a full-fledged decentralized medical records system. Start by watching the tutorial and adding some test records.</p>
-          <p><a class="btn btn-primary btn-lg" href="https://www.mycoralhealth.com" target="_blank" role="button">Tutorial &raquo;</a></p>
+          personalized health tips easily through a full-fledged decentralized medical records system. Start by adding some test records.</p>
         </div>
       </div>
 
@@ -179,7 +178,7 @@ export default {
     clearExistingRecord() {
       this.record.age = ''
       this.record.height = ''
-      this.record.weight = '' 
+      this.record.weight = ''
       this.record.cholesterol = ''
       this.record.bloodPressure = ''
     },
