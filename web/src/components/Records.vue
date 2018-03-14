@@ -55,7 +55,28 @@
                       <span class="input-group-text">bpm</span>
                     </div>
                   </div>
-
+									<h2>For Insurance Approval</h2>
+									<label for="inputNumberCysts" class="sr-only">Number of Painful Cysts</label>
+									<div class="input-group">
+										<input type="number" class="form-control" id="importNumberCysts" placeholder="Number of Painful Cysts" v-model="record.numberCysts" required>
+									</div>
+									<label for="inputBaldess" class="sr-only">Baldness</label>
+									<div class="form-group">
+										<select required class="form-control" id="selectBaldness" v-model="record.baldness">
+											<option disabled selected value="">Baldness?</option>
+											<option v-for="option in baldnessOptions" v-bind:value="option.value">
+												{{option.text}}
+											</option>
+										</select>
+									</div>
+									<div class="form-group" v-if="record.baldness">
+										<select required class="form-control" id="selectBaldFromDisease" v-model="record.fromDisease">
+											<option disabled selected value="">Baldness due to disease?</option>
+											<option v-for="option in baldnessOptions" v-bind:value="option.value">
+												{{option.text}}
+											</option>
+										</select>
+									</div>
                   <button class="btn btn-secondary" :disabled="loading" type="submit" href="#" role="button"><i class="fa fa-refresh fa-spin" v-if="loading"></i><div v-else="loading">Add</div></button>
                 </div>
               </form>
@@ -121,10 +142,23 @@ export default {
   },
   data () {
     return {
-      record: { age: '', height: '', weight: '', cholesterol: '', bloodPressure: ''},
+      record: { 
+				age: '', 
+				height: '', 
+				weight: '', 
+				cholesterol: '', 
+				bloodPressure: '', 
+				baldness: '', 
+				fromDisease: ''
+			},
       records: [],
       loading: false,
-      error: false
+      error: false,
+			baldnessSelected: "",
+			baldnessOptions: [
+				{ text: "No", value: false },
+				{ text: "Yes", value: true}
+			]
     }
   },
   created () {
@@ -264,6 +298,10 @@ export default {
 
 .btn-spacer {
   margin-right: 15px;
+}
+
+select:invalid {
+	color: #868e95;
 }
 
 </style>
