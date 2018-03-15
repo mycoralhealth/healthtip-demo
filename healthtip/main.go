@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"healthtip-demo"
 	"log"
 	"os"
 
@@ -29,6 +30,6 @@ func main() {
 	}
 	defer dbCon.Close()
 
-	log.Fatal(run(dbCon))
+	log.Fatal(healthtip.Run(dbCon))
 
 }

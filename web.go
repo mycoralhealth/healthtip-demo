@@ -1,4 +1,4 @@
-package main
+package healthtip
 
 import (
 	"database/sql"
@@ -6,14 +6,14 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"time"
 	"strings"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
 )
 
-func run(dbCon *sql.DB) error {
+func Run(dbCon *sql.DB) error {
 
 	httpAddr := os.Getenv("ADDR")
 

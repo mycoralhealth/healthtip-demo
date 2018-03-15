@@ -1,4 +1,4 @@
-package main
+package healthtip
 
 import (
 	"crypto/rand"
