@@ -228,6 +228,42 @@ func checkRecordExists(dbCon *sql.DB, ID int) error {
 
 }
 
+func getAllCompanies(db *sql.DB) ([]InsuranceCompany, error) {
+	var companies []InsuranceCompany
+	rows, err := db.Query(`SELECT * FROM insurance_companies;`)
+	if err != nil {
+		return companies, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var c InsuranceCompany
+		if err := rows.Scan(&c.Id, &c.Name); err != nil {
+			return nil, err
+		}
+		companies = append(companies, c)
+	}
+	return companies, nil
+}
+
+func getAllProcedures(db *sql.DB) ([]Procedure, error) {
+	var procedures []Procedure
+	rows, err := db.Query(`SELECT * FROM procedures;`)
+	if err != nil {
+		return procedures, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var p Procedure
+		if err := rows.Scan(&p.Id, &p.Name); err != nil {
+			return nil, err
+		}
+		procedures = append(procedures, p)
+	}
+	return procedures, nil
+}
+
 func hashPassword(password string) string {
 	hash := sha256.New()
 	saltedPassword := "$%&*)(@#$)(*%@" + password + "%#$(*&#$%(*&@#)%"

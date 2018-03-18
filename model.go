@@ -26,9 +26,22 @@ type Record struct {
 	Cholesterol           int  `json:"cholesterol,string,omitempty"`
 	Blood_pressure        int  `json:"bloodPressure,string,omitempty"`
 	Number_of_cysts       int  `json:"numberOfCysts,string,omitempty"`
-	Baldness              bool `json:"baldness",omitempty`
-	Baldness_from_disease bool `json:"baldnessFromDisease",omitempty`
+	Baldness              bool `json:"baldness,omitempty"`
+	Baldness_from_disease bool `json:"baldnessFromDisease,omitempty"`
 	Tip_sent              int  `json:"tipSent,string,omitempty"`
+}
+
+// InsuranceCompany is a data representation of an insurance
+// company.
+type InsuranceCompany struct {
+	Id   int    `json:"id,string,omitempty"`
+	Name string `json:"name,omitempty"`
+}
+
+// Procedure is a medical procedure that a user can request.
+type Procedure struct {
+	Id   int    `json:"id,string,omitempty"`
+	Name string `json:"name,omitempty"`
 }
 
 // InsuranceApprovalRequest is request information required for an insurance

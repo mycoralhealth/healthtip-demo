@@ -453,6 +453,28 @@ func init() {
 	hairTransplantApproval[Excellus] = false
 }
 
+func handleCompanies(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
+	if r.Method == "GET" {
+		companies, err := getAllCompanies(dbCon)
+		if err != nil {
+			handleError(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+		respondWithJSON(w, r, http.StatusOK, companies)
+	}
+}
+
+func handleProcedures(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
+	if r.Method == "GET" {
+		procedures, err := getAllProcedures(dbCon)
+		if err != nil {
+			handleError(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+		respondWithJSON(w, r, http.StatusOK, procedures)
+	}
+}
+
 func handleInsuranceApproval(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 	vars := mux.Vars(r)
 	ID, err := strconv.Atoi(vars["id"])
@@ -502,4 +524,5 @@ func handleInsuranceApproval(w http.ResponseWriter, r *http.Request, dbCon *sql.
 		}
 		respondWithJSON(w, r, http.StatusOK, response)
 	}
+
 }
