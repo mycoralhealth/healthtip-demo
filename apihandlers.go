@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -423,4 +424,82 @@ func handleRecordTip(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 	updateRecord(dbCon, record)
 
 	respondWithJSON(w, r, http.StatusOK, record)
+}
+
+const (
+	// Supported treatments
+	HairRemoval    string = "LASER HAIR REMOVAL"
+	HairTransplant string = "HAIR TRANSPLANT"
+	// Supported insurance companies.
+	Bcbsma   string = "BCBSMA"
+	Aetna    string = "AETNA"
+	Excellus string = "EXCELLUS"
+)
+
+var (
+	hairRemovalApproval    map[string]bool
+	hairTransplantApproval map[string]bool
+)
+
+func init() {
+	hairRemovalApproval = make(map[string]bool)
+	hairRemovalApproval[Bcbsma] = true
+	hairRemovalApproval[Aetna] = false
+	hairRemovalApproval[Excellus] = false
+
+	hairTransplantApproval = make(map[string]bool)
+	hairTransplantApproval[Bcbsma] = true
+	hairTransplantApproval[Aetna] = true
+	hairTransplantApproval[Excellus] = false
+}
+
+func handleInsuranceApproval(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
+	vars := mux.Vars(r)
+	ID, err := strconv.Atoi(vars["id"])
+
+	if err != nil {
+		handleError(w, r, http.StatusNotFound, err.Error())
+		return
+	}
+
+	record, err := getRecord(dbCon, ID)
+	if err != nil {
+		handleError(w, r, http.StatusUnprocessableEntity, err.Error())
+		return
+	}
+
+	if r.Method == "POST" {
+		var request InsuranceApprovalRequest
+		decoder := json.NewDecoder(r.Body)
+		if err := decoder.Decode(&request); err != nil {
+			handleError(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+		defer r.Body.Close()
+
+		response := InsuranceApprovalResponse{InsuranceApprovalRequest: request}
+		company := strings.ToUpper(request.Company)
+		procedure := strings.ToUpper(request.Procedure)
+
+		// Approval logic
+		switch procedure {
+		case HairRemoval:
+			// Validate that the input company exists
+			if _, ok := hairRemovalApproval[company]; !ok {
+				handleError(w, r, http.StatusBadRequest, "Unsupported Company")
+				return
+			}
+			response.Approved = (record.Number_of_cysts > 1 && hairRemovalApproval[company])
+		case HairTransplant:
+			if _, ok := hairRemovalApproval[company]; !ok {
+				handleError(w, r, http.StatusBadRequest, "Unsupported Company")
+				return
+			}
+			response.Approved = (record.Baldness_from_disease && hairTransplantApproval[company])
+		default:
+			handleError(w, r, http.StatusBadRequest, "Unsupported Procedure")
+			return
+		}
+		respondWithJSON(w, r, http.StatusOK, response)
+	}
 }

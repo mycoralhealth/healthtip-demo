@@ -142,7 +142,7 @@ func getAllRecords(user_id int, dbCon *sql.DB) ([]Record, error) {
 
 	for rows.Next() {
 		var r Record
-		if err := rows.Scan(&r.ID, &r.User_id, &r.Age, &r.Height, &r.Weight, &r.Cholesterol, &r.Blood_pressure, &r.Tip_sent); err != nil {
+		if err := rows.Scan(&r.ID, &r.User_id, &r.Age, &r.Height, &r.Weight, &r.Cholesterol, &r.Blood_pressure, &r.Tip_sent, &r.Number_of_cysts, &r.Baldness, &r.Baldness_from_disease); err != nil {
 			return nil, err
 		}
 
@@ -158,7 +158,7 @@ func getRecord(dbCon *sql.DB, ID int) (Record, error) {
 	var record Record
 	row := dbCon.QueryRow(`SELECT ROWID, * FROM records WHERE ROWID = $1;`, ID)
 
-	if err := row.Scan(&record.ID, &record.User_id, &record.Age, &record.Height, &record.Weight, &record.Cholesterol, &record.Blood_pressure, &record.Tip_sent); err != nil {
+	if err := row.Scan(&record.ID, &record.User_id, &record.Age, &record.Height, &record.Weight, &record.Cholesterol, &record.Blood_pressure, &record.Tip_sent, &record.Number_of_cysts, &record.Baldness, &record.Baldness_from_disease); err != nil {
 		return record, err
 	}
 
@@ -203,8 +203,8 @@ func updateRecord(dbCon *sql.DB, record Record) error {
 
 func writeRecord(dbCon *sql.DB, record Record) (int64, error) {
 	result, err := dbCon.Exec(`INSERT INTO records
-		(user_id, age, height, weight, cholesterol, blood_pressure, tip_sent) VALUES ($1, $2, $3, $4, $5, $6, 0);
-	`, record.User_id, record.Age, record.Height, record.Weight, record.Cholesterol, record.Blood_pressure)
+		(user_id, age, height, weight, cholesterol, blood_pressure, tip_sent, number_of_cysts, baldness, baldness_from_disease) VALUES ($1, $2, $3, $4, $5, $6, 0, $7, $8, $9);
+	`, record.User_id, record.Age, record.Height, record.Weight, record.Cholesterol, record.Blood_pressure, record.Number_of_cysts, record.Baldness, record.Baldness_from_disease)
 	if err != nil {
 		return 0, fmt.Errorf("couldn't insert %v into records table: %v", record, err)
 	}

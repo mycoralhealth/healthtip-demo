@@ -25,10 +25,22 @@ type Record struct {
 	Weight                int  `json:"weight,string,omitempty"`
 	Cholesterol           int  `json:"cholesterol,string,omitempty"`
 	Blood_pressure        int  `json:"bloodPressure,string,omitempty"`
-	Number_of_cysts       int  `json:"numberOfCysts",string,omitempty"`
+	Number_of_cysts       int  `json:"numberOfCysts,string,omitempty"`
 	Baldness              bool `json:"baldness",omitempty`
 	Baldness_from_disease bool `json:"baldnessFromDisease",omitempty`
 	Tip_sent              int  `json:"tipSent,string,omitempty"`
+}
+
+// InsuranceApprovalRequest is request information required for an insurance
+// approval.
+type InsuranceApprovalRequest struct {
+	Procedure string `json:"procedure"`
+	Company   string `json:"company"`
+}
+
+type InsuranceApprovalResponse struct {
+	InsuranceApprovalRequest
+	Approved bool `json:"approved"`
 }
 
 // LoginResult is the model of an authorized login
