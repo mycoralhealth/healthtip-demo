@@ -264,6 +264,17 @@ func getAllProcedures(db *sql.DB) ([]Procedure, error) {
 	return procedures, nil
 }
 
+func getConditionalApproval(db *sql.DB, companyId, procedureId int) (bool, error) {
+	var approved bool
+	row := db.QueryRow(`SELECT conditional_approval FROM medical_policies
+		WHERE company_id = $1 and procedure_id = $2;`, companyId, procedureId)
+
+	if err := row.Scan(&approved); err != nil {
+		return false, err
+	}
+	return approved, nil
+}
+
 func hashPassword(password string) string {
 	hash := sha256.New()
 	saltedPassword := "$%&*)(@#$)(*%@" + password + "%#$(*&#$%(*&@#)%"

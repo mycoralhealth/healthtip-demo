@@ -47,8 +47,8 @@ type Procedure struct {
 // InsuranceApprovalRequest is request information required for an insurance
 // approval.
 type InsuranceApprovalRequest struct {
-	Procedure string `json:"procedure"`
-	Company   string `json:"company"`
+	Procedure Procedure        `json:"procedure"`
+	Company   InsuranceCompany `json:"company"`
 }
 
 type InsuranceApprovalResponse struct {

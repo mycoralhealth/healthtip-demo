@@ -6,15 +6,14 @@ import (
 	"encoding/base32"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"github.com/gorilla/mux"
 	"io"
 	"net/http"
 	"net/url"
 	"os"
 	"strconv"
-	"strings"
 	"time"
-
-	"github.com/gorilla/mux"
 )
 
 func makeLoginResult(user User, auth AuthToken) LoginResult {
@@ -428,30 +427,9 @@ func handleRecordTip(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 
 const (
 	// Supported treatments
-	HairRemoval    string = "LASER HAIR REMOVAL"
-	HairTransplant string = "HAIR TRANSPLANT"
-	// Supported insurance companies.
-	Bcbsma   string = "BCBSMA"
-	Aetna    string = "AETNA"
-	Excellus string = "EXCELLUS"
+	HairRemoval    int = 1
+	HairTransplant int = 2
 )
-
-var (
-	hairRemovalApproval    map[string]bool
-	hairTransplantApproval map[string]bool
-)
-
-func init() {
-	hairRemovalApproval = make(map[string]bool)
-	hairRemovalApproval[Bcbsma] = true
-	hairRemovalApproval[Aetna] = false
-	hairRemovalApproval[Excellus] = false
-
-	hairTransplantApproval = make(map[string]bool)
-	hairTransplantApproval[Bcbsma] = true
-	hairTransplantApproval[Aetna] = true
-	hairTransplantApproval[Excellus] = false
-}
 
 func handleCompanies(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 	if r.Method == "GET" {
@@ -500,26 +478,20 @@ func handleInsuranceApproval(w http.ResponseWriter, r *http.Request, dbCon *sql.
 		defer r.Body.Close()
 
 		response := InsuranceApprovalResponse{InsuranceApprovalRequest: request}
-		company := strings.ToUpper(request.Company)
-		procedure := strings.ToUpper(request.Procedure)
-
+		var approved bool
+		var err error
+		if approved, err = getConditionalApproval(dbCon, request.Company.Id, request.Procedure.Id); err != nil {
+			handleError(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
 		// Approval logic
-		switch procedure {
+		switch request.Procedure.Id {
 		case HairRemoval:
-			// Validate that the input company exists
-			if _, ok := hairRemovalApproval[company]; !ok {
-				handleError(w, r, http.StatusBadRequest, "Unsupported Company")
-				return
-			}
-			response.Approved = (record.Number_of_cysts > 1 && hairRemovalApproval[company])
+			response.Approved = (record.Number_of_cysts > 1 && approved)
 		case HairTransplant:
-			if _, ok := hairRemovalApproval[company]; !ok {
-				handleError(w, r, http.StatusBadRequest, "Unsupported Company")
-				return
-			}
-			response.Approved = (record.Baldness_from_disease && hairTransplantApproval[company])
+			response.Approved = (record.Baldness_from_disease && approved)
 		default:
-			handleError(w, r, http.StatusBadRequest, "Unsupported Procedure")
+			handleError(w, r, http.StatusBadRequest, fmt.Sprintf("Unsupported Procedure: value=%+v", request))
 			return
 		}
 		respondWithJSON(w, r, http.StatusOK, response)
