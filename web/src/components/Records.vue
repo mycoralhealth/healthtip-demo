@@ -305,7 +305,7 @@ export default {
 				name: 'insurance-approval',
 				adaptive:true,
 				width: 600,
-				height: 'auto'
+				height: 300
 			})
 		},
 
