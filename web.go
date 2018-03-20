@@ -84,6 +84,8 @@ func makeMuxRouter(dbCon *sql.DB) http.Handler {
 	muxRouter.HandleFunc("/api/records/{id:[0-9]+}/approval", apiAuth(handleInsuranceApproval)).Methods("POST")
 	muxRouter.HandleFunc("/api/records/{id:[0-9]+}", apiAuth(handleSingleRecord)).Methods("DELETE")
 	muxRouter.HandleFunc("/api/companies", apiAuth(handleCompanies)).Methods("GET")
+	muxRouter.HandleFunc("/api/companies/{companyId:[0-9]+}/procedures/{procedureId:[0-9]+}/policy",
+		apiAuth(handleCompanyPolicy)).Methods("GET")
 	muxRouter.HandleFunc("/api/procedures", apiAuth(handleProcedures)).Methods("GET")
 	muxRouter.HandleFunc("/resetPassword", wrap(handleResetPassword)).Methods("POST")
 	muxRouter.HandleFunc("/claimToken", wrap(handleClaimToken)).Methods("POST")

@@ -275,6 +275,18 @@ func getConditionalApproval(db *sql.DB, companyId, procedureId int) (bool, error
 	return approved, nil
 }
 
+func getPolicyFile(db *sql.DB, companyId, procedureId int) (string, []byte, error) {
+	var name string
+	var bytes []byte
+	row := db.QueryRow(`SELECT f.name, f.content FROM medical_policies AS m INNER JOIN files AS f
+		ON m.file_id = f.id WHERE m.company_id = $1 AND m.procedure_id = $2;`, companyId, procedureId)
+
+	if err := row.Scan(&name, &bytes); err != nil {
+		return "", nil, err
+	}
+	return name, bytes, nil
+}
+
 func hashPassword(password string) string {
 	hash := sha256.New()
 	saltedPassword := "$%&*)(@#$)(*%@" + password + "%#$(*&#$%(*&@#)%"

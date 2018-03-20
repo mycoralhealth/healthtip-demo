@@ -1,6 +1,7 @@
 package healthtip
 
 import (
+	"bytes"
 	"crypto/rand"
 	"database/sql"
 	"encoding/base32"
@@ -495,6 +496,38 @@ func handleInsuranceApproval(w http.ResponseWriter, r *http.Request, dbCon *sql.
 			return
 		}
 		respondWithJSON(w, r, http.StatusOK, response)
+	}
+
+}
+
+func handleCompanyPolicy(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+	vars := mux.Vars(r)
+	companyId, err := strconv.Atoi(vars["companyId"])
+	if err != nil {
+		handleError(w, r, http.StatusNotFound, err.Error())
+		return
+	}
+	procedureId, err := strconv.Atoi(vars["procedureId"])
+	if err != nil {
+		handleError(w, r, http.StatusNotFound, err.Error())
+		return
+	}
+
+	// Get the file bytes
+	name, fileBytes, err := getPolicyFile(db, companyId, procedureId)
+	if err != nil {
+		handleError(w, r, http.StatusUnprocessableEntity, err.Error())
+		return
+	}
+
+	// write file to download stream
+	w.Header().Set("Access-Control-Expose-Headers", "Content-Disposition")
+	w.Header().Set("Content-Disposition", "attachment; filename="+name)
+	w.Header().Set("Content-Type", "application/octet-stream")
+	_, err = io.Copy(w, bytes.NewReader(fileBytes))
+	if err != nil {
+		handleError(w, r, http.StatusInternalServerError, err.Error())
+		return
 	}
 
 }
