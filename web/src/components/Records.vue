@@ -121,7 +121,7 @@
 										<br><br>
 									</td>
 									<td colspan="3">
-										<button type="button" :disabled="options.loading" class="btn btn-outline-success" @click="showApprovalPopup(index)">Request Insurance Approval</button>
+										<button type="button" class="btn btn-outline-success" @click="showApprovalPopup(index)">Request Insurance Approval</button>
 									</td>
                 </tr>
               </tbody>
@@ -165,10 +165,9 @@ export default {
 				baldnessFromDisease: ''
 			},
       records: [],
-			options: {loading: false},
       loading: false,
       error: false,
-			baldnessSelected: "",
+			baldnessSelected: '',
 			baldnessOptions: [
 				{ text: "No", value: false },
 				{ text: "Yes", value: true}
@@ -178,8 +177,8 @@ export default {
   created () {
     this.checkCurrentLogin()
     this.fetchRecords()
-		this.fetchApprovalOptions()
   },
+
   methods: {
     checkCurrentLogin () {
       if (!this.currentUser) {
@@ -195,7 +194,9 @@ export default {
 
     addRecord () {
       this.loading = true
-
+			if(this.record.baldnessFromDisease === "") {
+				this.record.baldnessFromDisease = false;
+			}
       if (this.record.age.trim()) {
         this.$http.post('/api/records', this.record, {headers: {'Authorization': this.currentUser.getAuth()}})
           .then(request => this.appendRecordResult(request))
@@ -251,19 +252,7 @@ export default {
       this.records = req.data;
     },
 		
-		fetchApprovalOptions() {
-			var that = this;
-			that.options.loading = true;
-			Promise.all([
-				that.$http.get('/api/companies', {headers: {'Authorization': this.currentUser.getAuth()}}),
-				that.$http.get('/api/procedures', {headers: {'Authorization': this.currentUser.getAuth()}})
-			]).then(function ([companies, procedures]) {
-				that.options.companies = companies.data;
-				that.options.procedures = procedures.data;
-				that.options.loading = false;
-			}).catch(err => this.reportError(err));
-		},
-
+		
     reportError(err) {
       this.loading = false
       this.error = err
@@ -300,7 +289,6 @@ export default {
 			this.$modal.show(ApprovalPopup, {
 				recordId: this.records[index].id,
 				onCloseHandler: this.hideApprovalPopup,
-				options: this.options
 			}, {
 				name: 'insurance-approval',
 				adaptive:true,
