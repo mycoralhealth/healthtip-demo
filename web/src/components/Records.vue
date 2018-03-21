@@ -15,12 +15,7 @@
         <div class="row">
           <div class="col-md-4">
             <h2>Add Test Result</h2>
-              <div class="alert alert-danger alert-dismissible" v-if="error">
-                <button type="button" class="close" data-dismiss="alert" aria-label="Close" v-on:click="dismissError()">
-                  <span aria-hidden="true">&times;</span>
-                </button>
-                {{ error }}
-              </div>
+							<error-bar :error="error" :onDismissHandler="dismissError"/>
               <form class="form-new-result" @submit.prevent="addRecord">
                 <div class="form-group">
                   <label for="inputAge" class="sr-only">Age</label>
@@ -145,10 +140,11 @@
 import { mapGetters } from 'vuex'
 import Simplert from 'vue2-simplert'
 import ApprovalPopup from './ApprovalPopup.vue'
+import ErrorBar from './ErrorBar.vue'
 
 export default {
   name: 'Records',
-  components: { Simplert, ApprovalPopup },
+  components: { Simplert, ApprovalPopup, ErrorBar },
   computed: {
     ...mapGetters({ currentUser: 'currentUser' })
   },
@@ -172,6 +168,7 @@ export default {
 				{ text: "No", value: false },
 				{ text: "Yes", value: true}
 			],
+			error: false,
     }
   },
   created () {

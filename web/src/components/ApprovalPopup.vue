@@ -7,6 +7,7 @@
 						<span>&times;</span>
 					</button>
 				</div>
+				<error-bar :error="error" :onDismissHandler="dismissError"/>
 				<form class="form-approval" v-if="formStage === 0" @submit.prevent="submitApprovalRequest">
 					<div class="form-group">
 						<h3> Select the procedure for which you want Insurance Approval </h3>
@@ -29,7 +30,7 @@
 								</option>
 							</select>
 						</div>
-						<div>
+						<div class="button-approval">
 							<button :disabled="options.loading" role="button" class="btn btn-outline-success" type="submit">
 								<i class="fa fa-refresh fa-spin" v-if="options.loading"></i>
 								<div v-else="options.loading"> Submit Request </div>
@@ -44,8 +45,11 @@
 					<div>
 						{{generateApprovalText()}}
 					</div>
-					<div>
-						<button role="button" class="btn btn-outline-success" type="button" @click="downloadMedicalPolicy()">View {{approvalResponse.company.name}}'s medical policy</button>
+					<div class="button-approval">
+						<button role="button" class="btn btn-outline-success" type="button" @click="downloadMedicalPolicy()">
+							<i class="fa fa-refresh fa-spin" v-if="loading"></i>
+							<div v-else="loading"> View {{approvalResponse.company.name}}'s medical policy </div>
+						</button>
 					</div>
 				</div>
 			</div>
@@ -55,11 +59,13 @@
 
 <script>
 import { mapGetters } from 'vuex'
+import ErrorBar from './ErrorBar.vue'
 import checkmark from '../assets/icons8-checkmark.svg'
 import cancel from '../assets/icons8-cancel.svg'
 
 export default {
 	name: 'ApprovalPopup',
+	components: {ErrorBar},
 	props: ['recordId','onCloseHandler'],
   computed: {
     ...mapGetters({ currentUser: 'currentUser' })
@@ -77,7 +83,9 @@ export default {
 				procedures:[],
 				loading:false
 			},
-			approvalImage: checkmark
+			approvalImage: checkmark,
+			loading: false,
+			error: false
 		}
 	},
 
@@ -89,8 +97,7 @@ export default {
 		submitApprovalRequest() {
 			this.$http.post('/api/records/' + this.recordId + '/approval', this.approvalRequest, {headers: {'Authorization': this.currentUser.getAuth()}})
 				.then(response => this.displayApprovalResults(response.data))
-				.catch(function(err) {
-					});
+				.catch(err => this.reportError(err));
 		},
 
 		displayApprovalResults(response) {
@@ -125,10 +132,12 @@ export default {
 		},
 
 		downloadMedicalPolicy() {
-			this.$http({
-				url: '/api/companies/'+this.approvalResponse.company.id+'/procedures/'+this.approvalResponse.procedure.id+'/policy',
+			var that = this
+			that.loading = true
+			that.$http({
+				url: '/api/companies/'+that.approvalResponse.company.id+'/procedures/'+that.approvalResponse.procedure.id+'/policy',
 				method: 'GET',
-				headers: {'Authorization': this.currentUser.getAuth()},
+				headers: {'Authorization': that.currentUser.getAuth()},
 				responseType: 'blob', // important
 			}).then(response => {
 				const disposition = response.headers["content-disposition"];
@@ -141,7 +150,18 @@ export default {
 				link.setAttribute('download', filename);
 				document.body.appendChild(link);
 				link.click();
-			});
+				that.loading = false
+				that.onCloseHandler()
+			}).catch(err => that.reportError(err));
+		},
+
+		reportError(error) {
+			this.options.loading = false;
+			this.error = error;
+		},
+
+		dismissError() {
+			this.error = false;
 		}
 	}
 }
@@ -164,7 +184,13 @@ export default {
 }
 
 .spacer {
+	margin-top:5px;
+	margin-bottom:15px;
+}
+
+.button-approval {
 	margin-top:15px;
+	margin-bottom:10px;
 }
 
 select:invalid {
