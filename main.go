@@ -3,7 +3,7 @@ package main
 import (
 	"database/sql"
 	"fmt"
-	"healthtip-demo"
+	"healthtip-demo/healthtip"
 	"log"
 	"os"
 
