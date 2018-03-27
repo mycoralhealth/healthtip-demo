@@ -1,19 +1,20 @@
-package main
+package healthtip
 
 import (
+	"bytes"
 	"crypto/rand"
 	"database/sql"
 	"encoding/base32"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"github.com/gorilla/mux"
 	"io"
 	"net/http"
 	"net/url"
 	"os"
 	"strconv"
 	"time"
-
-	"github.com/gorilla/mux"
 )
 
 func makeLoginResult(user User, auth AuthToken) LoginResult {
@@ -21,8 +22,8 @@ func makeLoginResult(user User, auth AuthToken) LoginResult {
 
 	result.Token = auth
 	result.Email = user.Email
-	result.First_name = user.First_name
-	result.Last_name = user.Last_name
+	result.FirstName = user.FirstName
+	result.LastName = user.LastName
 
 	return result
 }
@@ -42,14 +43,14 @@ func handleWriteUser(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 		return
 	}
 
-	lastID, err := writeUser(dbCon, user)
+	lastId, err := writeUser(dbCon, user)
 	if err != nil {
 		handleError(w, r, http.StatusUnprocessableEntity, err.Error())
 		return
 	}
 
-	user.ID = int(lastID)
-	auth, err := createAuthToken(user.ID, dbCon)
+	user.Id = int(lastId)
+	auth, err := createAuthToken(user.Id, dbCon)
 	if err != nil {
 		handleError(w, r, http.StatusUnprocessableEntity, err.Error())
 		return
@@ -58,17 +59,17 @@ func handleWriteUser(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 	respondWithJSON(w, r, http.StatusCreated, makeLoginResult(user, auth))
 }
 
-func createAuthToken(ID int, dbCon *sql.DB) (AuthToken, error) {
+func createAuthToken(Id int, dbCon *sql.DB) (AuthToken, error) {
 	var auth AuthToken
 	// create auth token and put in DB
-	auth.Api_user = ID
+	auth.ApiUser = Id
 	// generated salted hash from current time and random number is the auth token
 	token, err := getRandomString(10)
 	if err != nil {
 		return auth, err
 	}
 
-	auth.Api_key = hashPassword(token)
+	auth.ApiKey = hashPassword(token)
 	if err := writeAuthToken(dbCon, auth); err != nil {
 		return auth, err
 	}
@@ -96,7 +97,7 @@ func handleUpdateUser(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 	defer r.Body.Close()
 
 	auth, _ := getBasicAPIAuth(r)
-	user.ID = auth.Api_user
+	user.Id = auth.ApiUser
 
 	if err := updateUser(dbCon, user); err != nil {
 		handleError(w, r, http.StatusUnprocessableEntity, err.Error())
@@ -127,7 +128,7 @@ func handleLogin(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 		return
 	}
 
-	auth, err := createAuthToken(dbUser.ID, dbCon)
+	auth, err := createAuthToken(dbUser.Id, dbCon)
 	if err != nil {
 		handleError(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -148,7 +149,7 @@ func handleChangePassword(w http.ResponseWriter, r *http.Request, dbCon *sql.DB)
 	}
 	defer r.Body.Close()
 
-	user.ID = auth.Api_user
+	user.Id = auth.ApiUser
 	err := updateUserPassword(dbCon, user)
 	if err != nil {
 		handleError(w, r, http.StatusBadRequest, err.Error())
@@ -176,13 +177,13 @@ func handleResetPassword(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) 
 		return
 	}
 
-	auth, err := createAuthToken(dbUser.ID, dbCon)
+	auth, err := createAuthToken(dbUser.Id, dbCon)
 	if err != nil {
 		handleError(w, r, http.StatusUnprocessableEntity, err.Error())
 		return
 	}
 
-	url := os.Getenv("CLIENT_URL") + "changePass?token=" + url.QueryEscape(auth.Api_key)
+	url := os.Getenv("CLIENT_URL") + "changePass?token=" + url.QueryEscape(auth.ApiKey)
 	emailPasswordReset(dbUser, url)
 
 	respondWithJSON(w, r, http.StatusNoContent, nil)
@@ -198,26 +199,26 @@ func handleClaimToken(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 	}
 	defer r.Body.Close()
 
-	userID, err := returnAuthUserID(dbCon, auth)
+	userId, err := returnAuthUserId(dbCon, auth)
 	if err != nil {
 		handleError(w, r, 404, err.Error())
 		return
 	}
 
-	auth.Api_user = userID
+	auth.ApiUser = userId
 
 	if err := deleteAuthToken(dbCon, auth); err != nil {
 		handleError(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	user, err := findUser(dbCon, userID)
+	user, err := findUser(dbCon, userId)
 	if err != nil {
 		handleError(w, r, 404, err.Error())
 		return
 	}
 
-	newAuth, err := createAuthToken(user.ID, dbCon)
+	newAuth, err := createAuthToken(user.Id, dbCon)
 	if err != nil {
 		handleError(w, r, http.StatusUnprocessableEntity, err.Error())
 		return
@@ -249,16 +250,16 @@ func getBasicAPIAuth(r *http.Request) (AuthToken, error) {
 
 	p, s, ok := r.BasicAuth()
 	if !ok {
-		return token, errors.New("invalid API Authorization token. Required Basic Api_user:Api_key")
+		return token, errors.New("invalid API Authorization token. Required Basic ApiUser:ApiKey")
 	}
 
 	apiUser, err := strconv.Atoi(p)
 	if err != nil {
-		return token, errors.New("invalid Api_user")
+		return token, errors.New("invalid ApiUser")
 	}
 
-	token.Api_user = apiUser
-	token.Api_key = s
+	token.ApiUser = apiUser
+	token.ApiKey = s
 
 	return token, nil
 }
@@ -278,7 +279,7 @@ func handleRecords(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 	auth, _ := getBasicAPIAuth(r)
 
 	if r.Method == "GET" {
-		records, err := getAllRecords(auth.Api_user, dbCon)
+		records, err := getAllRecords(auth.ApiUser, dbCon)
 		if err != nil {
 			handleError(w, r, http.StatusInternalServerError, err.Error())
 			return
@@ -301,28 +302,28 @@ func handleRecords(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 		}
 		defer r.Body.Close()
 
-		record.User_id = auth.Api_user
-		ID, err := writeRecord(dbCon, record)
+		record.UserId = auth.ApiUser
+		Id, err := writeRecord(dbCon, record)
 		if err != nil {
 			handleError(w, r, http.StatusInternalServerError, err.Error())
 			return
 		}
 
-		record.ID = int(ID)
+		record.Id = int(Id)
 		respondWithJSON(w, r, http.StatusCreated, record)
 	}
 }
 
 func handleSingleRecord(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 	vars := mux.Vars(r)
-	ID, err := strconv.Atoi(vars["id"])
+	Id, err := strconv.Atoi(vars["id"])
 	if err != nil {
 		handleError(w, r, http.StatusNotFound, err.Error())
 		return
 	}
 
 	if r.Method == "GET" {
-		record, err := getRecord(dbCon, ID)
+		record, err := getRecord(dbCon, Id)
 		if err != nil {
 			handleError(w, r, http.StatusInternalServerError, err.Error())
 			return
@@ -337,11 +338,11 @@ func handleSingleRecord(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 	}
 
 	if r.Method == "DELETE" {
-		if err := deleteRecord(dbCon, ID); err != nil {
+		if err := deleteRecord(dbCon, Id); err != nil {
 			handleError(w, r, http.StatusNotFound, err.Error())
 			return
 		}
-		respondWithJSON(w, r, http.StatusNoContent, ID)
+		respondWithJSON(w, r, http.StatusNoContent, Id)
 	}
 
 	if r.Method == "PUT" {
@@ -353,7 +354,7 @@ func handleSingleRecord(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 		}
 		defer r.Body.Close()
 
-		record.ID = ID
+		record.Id = Id
 		if err := updateRecord(dbCon, record); err != nil {
 			handleError(w, r, http.StatusInternalServerError, err.Error())
 			return
@@ -365,27 +366,27 @@ func handleSingleRecord(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 
 func handleRecordTip(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 	vars := mux.Vars(r)
-	ID, err := strconv.Atoi(vars["id"])
+	Id, err := strconv.Atoi(vars["id"])
 
 	if err != nil {
 		handleError(w, r, http.StatusNotFound, err.Error())
 		return
 	}
 
-	record, err := getRecord(dbCon, ID)
+	record, err := getRecord(dbCon, Id)
 	if err != nil {
 		handleError(w, r, http.StatusUnprocessableEntity, err.Error())
 		return
 	}
 
-	if record.Tip_sent != 0 {
+	if record.TipSent != 0 {
 		handleError(w, r, http.StatusUnprocessableEntity, "You can only request a tip on the same record once.")
 		return
 	}
 
 	auth, _ := getBasicAPIAuth(r)
 
-	dbUser, err := getUserForId(dbCon, auth.Api_user)
+	dbUser, err := getUserForId(dbCon, auth.ApiUser)
 
 	if err != nil {
 		handleError(w, r, http.StatusNotFound, err.Error())
@@ -394,7 +395,7 @@ func handleRecordTip(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 
 	now := time.Now()
 
-	if dbUser.Last_tip != 0 {
+	if dbUser.LastTip != 0 {
 		secs := now.Unix()
 		interval, err := strconv.ParseInt(os.Getenv("TIP_INTERVAL"), 10, 64)
 
@@ -403,7 +404,7 @@ func handleRecordTip(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 			return
 		}
 
-		if secs < (dbUser.Last_tip + interval) {
+		if secs < (dbUser.LastTip + interval) {
 			handleError(w, r, http.StatusUnprocessableEntity, "You can only request one Health Tip every 24 hours.")
 			return
 		}
@@ -416,11 +417,117 @@ func handleRecordTip(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 		return
 	}
 
-	dbUser.Last_tip = now.Unix()
+	dbUser.LastTip = now.Unix()
 	updateUserTipTime(dbCon, dbUser)
 
-	record.Tip_sent = 1
+	record.TipSent = 1
 	updateRecord(dbCon, record)
 
 	respondWithJSON(w, r, http.StatusOK, record)
+}
+
+const (
+	// Supported treatments
+	HairRemoval    int = 1
+	HairTransplant int = 2
+)
+
+func handleCompanies(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
+	if r.Method == "GET" {
+		companies, err := getAllCompanies(dbCon)
+		if err != nil {
+			handleError(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+		respondWithJSON(w, r, http.StatusOK, companies)
+	}
+}
+
+func handleProcedures(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
+	if r.Method == "GET" {
+		procedures, err := getAllProcedures(dbCon)
+		if err != nil {
+			handleError(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+		respondWithJSON(w, r, http.StatusOK, procedures)
+	}
+}
+
+func handleInsuranceApproval(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
+	vars := mux.Vars(r)
+	Id, err := strconv.Atoi(vars["id"])
+
+	if err != nil {
+		handleError(w, r, http.StatusNotFound, err.Error())
+		return
+	}
+
+	record, err := getRecord(dbCon, Id)
+	if err != nil {
+		handleError(w, r, http.StatusUnprocessableEntity, err.Error())
+		return
+	}
+
+	if r.Method == "POST" {
+		var request InsuranceApprovalRequest
+		decoder := json.NewDecoder(r.Body)
+		if err := decoder.Decode(&request); err != nil {
+			handleError(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+		defer r.Body.Close()
+
+		response := InsuranceApprovalResponse{InsuranceApprovalRequest: request}
+		var approved bool
+		var err error
+		if approved, err = getConditionalApproval(dbCon, request.Company.Id, request.Procedure.Id); err != nil {
+			handleError(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+		// Approval logic
+		switch request.Procedure.Id {
+		case HairRemoval:
+			response.Approved = (record.NumberOfCysts > 1 && approved)
+		case HairTransplant:
+			response.Approved = (record.BaldnessFromDisease && approved)
+		default:
+			handleError(w, r, http.StatusBadRequest, fmt.Sprintf("Unsupported Procedure: value=%+v", request))
+			return
+		}
+		respondWithJSON(w, r, http.StatusOK, response)
+	}
+
+}
+
+func handleCompanyPolicy(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+	vars := mux.Vars(r)
+	companyId, err := strconv.Atoi(vars["companyId"])
+	if err != nil {
+		handleError(w, r, http.StatusNotFound, err.Error())
+		return
+	}
+	procedureId, err := strconv.Atoi(vars["procedureId"])
+	if err != nil {
+		handleError(w, r, http.StatusNotFound, err.Error())
+		return
+	}
+
+	// Get the file bytes
+	name, fileBytes, err := getPolicyFile(db, companyId, procedureId)
+	if err != nil {
+		handleError(w, r, http.StatusUnprocessableEntity, err.Error())
+		return
+	}
+
+	// write file to download stream
+	w.Header().Set("Access-Control-Expose-Headers", "Content-Disposition")
+	w.Header().Set("Content-Disposition", "attachment; filename="+name)
+	w.Header().Set("Content-Type", "application/octet-stream")
+	_, err = io.Copy(w, bytes.NewReader(fileBytes))
+	if err != nil {
+		handleError(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
 }

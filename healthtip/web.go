@@ -1,4 +1,4 @@
-package main
+package healthtip
 
 import (
 	"database/sql"
@@ -6,14 +6,14 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"time"
 	"strings"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
 )
 
-func run(dbCon *sql.DB) error {
+func Run(dbCon *sql.DB) error {
 
 	httpAddr := os.Getenv("ADDR")
 
@@ -81,7 +81,12 @@ func makeMuxRouter(dbCon *sql.DB) http.Handler {
 	muxRouter.HandleFunc("/api/records/{id:[0-9]+}", apiAuth(handleSingleRecord)).Methods("GET")
 	muxRouter.HandleFunc("/api/records/{id:[0-9]+}", apiAuth(handleSingleRecord)).Methods("PUT")
 	muxRouter.HandleFunc("/api/records/{id:[0-9]+}/tip", apiAuth(handleRecordTip)).Methods("POST")
+	muxRouter.HandleFunc("/api/records/{id:[0-9]+}/approval", apiAuth(handleInsuranceApproval)).Methods("POST")
 	muxRouter.HandleFunc("/api/records/{id:[0-9]+}", apiAuth(handleSingleRecord)).Methods("DELETE")
+	muxRouter.HandleFunc("/api/companies", apiAuth(handleCompanies)).Methods("GET")
+	muxRouter.HandleFunc("/api/companies/{companyId:[0-9]+}/procedures/{procedureId:[0-9]+}/policy",
+		apiAuth(handleCompanyPolicy)).Methods("GET")
+	muxRouter.HandleFunc("/api/procedures", apiAuth(handleProcedures)).Methods("GET")
 	muxRouter.HandleFunc("/resetPassword", wrap(handleResetPassword)).Methods("POST")
 	muxRouter.HandleFunc("/claimToken", wrap(handleClaimToken)).Methods("POST")
 	muxRouter.HandleFunc("/changePassword", apiAuth(handleChangePassword)).Methods("POST")

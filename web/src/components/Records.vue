@@ -1,6 +1,6 @@
 <template>
     <main role="main" class="records-overlay">
-
+			<modals-container/>
       <!-- Main jumbotron for a primary marketing message or call to action -->
       <div class="jumbotron jumbotron-push">
         <div class="container">
@@ -15,12 +15,7 @@
         <div class="row">
           <div class="col-md-4">
             <h2>Add Test Result</h2>
-              <div class="alert alert-danger alert-dismissible" v-if="error">
-                <button type="button" class="close" data-dismiss="alert" aria-label="Close" v-on:click="dismissError()">
-                  <span aria-hidden="true">&times;</span>
-                </button>
-                {{ error }}
-              </div>
+							<error-bar :error="error" :onDismissHandler="dismissError"/>
               <form class="form-new-result" @submit.prevent="addRecord">
                 <div class="form-group">
                   <label for="inputAge" class="sr-only">Age</label>
@@ -55,7 +50,28 @@
                       <span class="input-group-text">bpm</span>
                     </div>
                   </div>
-
+									<h2>For Insurance Approval</h2>
+									<label for="inputNumberCysts" class="sr-only">Number of Painful Cysts</label>
+									<div class="input-group">
+										<input type="number" class="form-control" id="importNumberCysts" placeholder="Number of Painful Cysts" v-model="record.numberOfCysts" required>
+									</div>
+									<label for="inputBaldess" class="sr-only">Baldness</label>
+									<div class="form-group">
+										<select required class="form-control" id="selectBaldness" v-model="record.baldness">
+											<option disabled selected value="">Baldness?</option>
+											<option v-for="option in baldnessOptions" v-bind:value="option.value">
+												{{option.text}}
+											</option>
+										</select>
+									</div>
+									<div class="form-group" v-if="record.baldness">
+										<select required class="form-control" id="selectBaldFromDisease" v-model="record.baldnessFromDisease">
+											<option disabled selected value="">Baldness due to disease?</option>
+											<option v-for="option in baldnessOptions" v-bind:value="option.value">
+												{{option.text}}
+											</option>
+										</select>
+									</div>
                   <button class="btn btn-secondary" :disabled="loading" type="submit" href="#" role="button"><i class="fa fa-refresh fa-spin" v-if="loading"></i><div v-else="loading">Add</div></button>
                 </div>
               </form>
@@ -75,6 +91,9 @@
                   <th>Weight (kg)</th>
                   <th>Heart Rate (bpm)</th>
                   <th>Breath Rate (bpm)</th>
+									<th>Number of Cysts</th>
+									<th>Baldness?</th>
+									<th>Baldness from disease?</th>
                   <th></th>
                 </tr>
               </thead>
@@ -85,10 +104,20 @@
                   <td>{{ r.weight }}</td>
                   <td>{{ r.cholesterol }}</td>
                   <td>{{ r.bloodPressure }}</td>
+									<td>{{ r.numberOfCysts}}</td>
+									<td>{{ r.baldness ? "Yes" : "No" }}</td>
+									<td>{{ r.baldnessFromDisease ? "Yes" : "No" }}</td>
                   <td><a href="#" v-on:click="deleteRecord(index)"><i class="fa fa-trash-o"></i></a></td>
                 </tr>
                 <tr class="text-left">
-                  <td colspan="6"><button type="button" class="btn btn-outline-secondary disabled" v-if="r.tipSent == 1">Tip Requested</button><button type="button" class="btn btn-outline-success" v-else="r.tipSent == 1" v-on:click="requestTip(index)">Request Tip</button><br><br></td>
+                  <td colspan="2">
+										<button type="button" class="btn btn-outline-secondary disabled" v-if="r.tipSent == 1">Tip Requested</button>
+										<button type="button" class="btn btn-outline-success" v-else="r.tipSent == 1" v-on:click="requestTip(index)">Request Tip</button>
+										<br><br>
+									</td>
+									<td colspan="3">
+										<button type="button" class="btn btn-outline-success" @click="showApprovalPopup(index)">Request Insurance Approval</button>
+									</td>
                 </tr>
               </tbody>
             </table>
@@ -99,38 +128,54 @@
         <hr>
         <p class="text-muted text-center copy"><small>Copyright &copy; 2018 <a href="https://mycoralhealth.com">Coral Health</a></small></p>
       </div> <!-- /container -->
-
       <simplert :useRadius="true"
                 :useIcon="true"
                 ref="simplert">
       </simplert>
     </main>
-
 </template>
 
 
 <script>
 import { mapGetters } from 'vuex'
 import Simplert from 'vue2-simplert'
+import ApprovalPopup from './ApprovalPopup.vue'
+import ErrorBar from './ErrorBar.vue'
 
 export default {
   name: 'Records',
-  components: { Simplert },
+  components: { Simplert, ApprovalPopup, ErrorBar },
   computed: {
     ...mapGetters({ currentUser: 'currentUser' })
   },
   data () {
     return {
-      record: { age: '', height: '', weight: '', cholesterol: '', bloodPressure: ''},
+      record: { 
+				age: '', 
+				height: '', 
+				weight: '', 
+				cholesterol: '', 
+				bloodPressure: '', 
+				numberOfCysts: '',
+				baldness: '', 
+				baldnessFromDisease: ''
+			},
       records: [],
       loading: false,
-      error: false
+      error: false,
+			baldnessSelected: '',
+			baldnessOptions: [
+				{ text: "No", value: false },
+				{ text: "Yes", value: true}
+			],
+			error: false,
     }
   },
   created () {
     this.checkCurrentLogin()
     this.fetchRecords()
   },
+
   methods: {
     checkCurrentLogin () {
       if (!this.currentUser) {
@@ -146,7 +191,9 @@ export default {
 
     addRecord () {
       this.loading = true
-
+			if(this.record.baldnessFromDisease === "") {
+				this.record.baldnessFromDisease = false;
+			}
       if (this.record.age.trim()) {
         this.$http.post('/api/records', this.record, {headers: {'Authorization': this.currentUser.getAuth()}})
           .then(request => this.appendRecordResult(request))
@@ -181,6 +228,9 @@ export default {
       this.record.weight = ''
       this.record.cholesterol = ''
       this.record.bloodPressure = ''
+			this.record.numberOfCysts = ''
+			this.record.baldness = ''
+			this.record.baldnessFromDisease = ''
     },
 
     appendRecordResult(req) {
@@ -198,7 +248,8 @@ export default {
     recordsLoaded (req) {
       this.records = req.data;
     },
-
+		
+		
     reportError(err) {
       this.loading = false
       this.error = err
@@ -229,7 +280,23 @@ export default {
 
     dismissError() {
       this.error = false
-    }
+    },
+
+		showApprovalPopup(index) {
+			this.$modal.show(ApprovalPopup, {
+				recordId: this.records[index].id,
+				onCloseHandler: this.hideApprovalPopup,
+			}, {
+				name: 'insurance-approval',
+				adaptive:true,
+				width: 600,
+				height: 300
+			})
+		},
+
+		hideApprovalPopup() {
+			this.$modal.hide('insurance-approval')
+		}
   }
 }
 </script>
@@ -264,6 +331,10 @@ export default {
 
 .btn-spacer {
   margin-right: 15px;
+}
+
+select:invalid {
+	color: #868e95;
 }
 
 </style>
