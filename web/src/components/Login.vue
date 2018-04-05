@@ -20,67 +20,80 @@
 
         <p class="text-muted copy"><small>Copyright &copy; 2018 <a href="https://mycoralhealth.com">Coral Health</a></small></p>
       </form>
+      <button class="btn btn-lg btn-primary btn-block" @click="login2" :disabled="loading" type="submit"><i class="fa fa-refresh fa-spin" v-if="loading"></i><div v-else="loading">Auth0 Sign-in</div></button>
     </div>
   </div>
 </template>
 
 <script>
-
-import { mapGetters } from 'vuex'
+import {mapGetters, mapActions} from 'vuex';
 
 export default {
   name: 'Login',
-  data () {
+  props: ['auth'],
+  data() {
     return {
       email: '',
       password: '',
       error: false,
-      loading: false
-    }
+      loading: false,
+    };
   },
   computed: {
-    ...mapGetters({ currentUser: 'currentUser' })
+    ...mapGetters(['isAuthenticated', 'currentUser']),
   },
-  created () {
-    this.checkCurrentLogin()
+  created() {
+    this.checkCurrentLogin();
   },
-  updated () {
-    this.checkCurrentLogin()
+  updated() {
+    this.checkCurrentLogin();
   },
   methods: {
-    checkCurrentLogin () {
-      if (this.currentUser) {
-        this.$router.replace(this.$route.query.redirect || '/records')
+    checkCurrentLogin() {
+      if (this.isAuthenticated) {
+        this.$router.replace(this.$route.query.redirect || '/records');
       }
     },
-    login () {
-      this.loading = true
-      this.$http.post('/login', {"email" : this.email, "password" : this.password}, {headers: {'Authorization': 'Basic ' + btoa(this.email + ':' + this.password)}})
+    login2() {
+      this.auth.login();
+    },
+    login() {
+      this.loading = true;
+      this.$http
+        .post(
+          '/login',
+          {email: this.email, password: this.password},
+          {
+            headers: {
+              Authorization: 'Basic ' + btoa(this.email + ':' + this.password),
+            },
+          },
+        )
         .then(request => this.loginSuccessful(request))
-        .catch(() => this.loginFailed())
+        .catch(() => this.loginFailed());
     },
-    loginSuccessful (req) {
-      this.loading = false
+    loginSuccessful(req) {
+      this.loading = false;
 
-      if (typeof(req.data.token) === "undefined" || req.data.token === null) {
-        this.loginFailed()
-        return
+      if (typeof req.data.token === 'undefined' || req.data.token === null) {
+        this.loginFailed();
+        return;
       }
 
-      this.error = false
+      this.error = false;
 
       localStorage.result = JSON.stringify(req.data);
-      this.$store.dispatch('login')
-      this.$router.replace(this.$route.query.redirect || '/records')
+      this.$store.dispatch('login');
+      this.$router.replace(this.$route.query.redirect || '/records');
     },
-    loginFailed () {
-      this.loading = false
-      this.error = 'Invalid email address or password'
-      this.$store.dispatch('logout')
-      delete localStorage.result
-    }
-  }
-}
+    loginFailed() {
+      this.loading = false;
+      this.error = 'Invalid email address or password';
+      this.$store.dispatch('logout');
+      delete localStorage.result;
+    },
+  },
+};
 </script>
 
 <style lang="css" scoped>

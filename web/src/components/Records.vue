@@ -137,168 +137,182 @@
 
 
 <script>
-import { mapGetters } from 'vuex'
-import Simplert from 'vue2-simplert'
-import ApprovalPopup from './ApprovalPopup.vue'
-import ErrorBar from './ErrorBar.vue'
+import {mapGetters} from 'vuex';
+import Simplert from 'vue2-simplert';
+import ApprovalPopup from './ApprovalPopup.vue';
+import ErrorBar from './ErrorBar.vue';
 
 export default {
   name: 'Records',
-  components: { Simplert, ApprovalPopup, ErrorBar },
+  components: {Simplert, ApprovalPopup, ErrorBar},
   computed: {
-    ...mapGetters({ currentUser: 'currentUser' })
+    ...mapGetters(['authString']),
   },
-  data () {
+  data() {
     return {
-      record: { 
-				age: '', 
-				height: '', 
-				weight: '', 
-				cholesterol: '', 
-				bloodPressure: '', 
-				numberOfCysts: '',
-				baldness: '', 
-				baldnessFromDisease: ''
-			},
+      record: {
+        age: '',
+        height: '',
+        weight: '',
+        cholesterol: '',
+        bloodPressure: '',
+        numberOfCysts: '',
+        baldness: '',
+        baldnessFromDisease: '',
+      },
       records: [],
       loading: false,
       error: false,
-			baldnessSelected: '',
-			baldnessOptions: [
-				{ text: "No", value: false },
-				{ text: "Yes", value: true}
-			],
-			error: false,
-    }
+      baldnessSelected: '',
+      baldnessOptions: [{text: 'No', value: false}, {text: 'Yes', value: true}],
+      error: false,
+    };
   },
-  created () {
-    this.checkCurrentLogin()
-    this.fetchRecords()
+  created() {
+    this.checkCurrentLogin();
+    this.fetchRecords();
   },
 
   methods: {
-    checkCurrentLogin () {
+    checkCurrentLogin() {
       if (!this.currentUser) {
-        this.$router.push('/')
+        this.$router.push('/');
       }
     },
 
-    fetchRecords () {
-      this.$http.get('/api/records', {headers: {'Authorization': this.currentUser.getAuth()}})
+    fetchRecords() {
+      this.$http
+        .get('/api/records', {
+          headers: {Authorization: this.authString},
+        })
         .then(request => this.recordsLoaded(request))
-        .catch(() => this.loadAPIError())
+        .catch(() => this.loadAPIError());
     },
 
-    addRecord () {
-      this.loading = true
-			if(this.record.baldnessFromDisease === "") {
-				this.record.baldnessFromDisease = false;
-			}
+    addRecord() {
+      this.loading = true;
+      if (this.record.baldnessFromDisease === '') {
+        this.record.baldnessFromDisease = false;
+      }
       if (this.record.age.trim()) {
-        this.$http.post('/api/records', this.record, {headers: {'Authorization': this.currentUser.getAuth()}})
+        this.$http
+          .post('/api/records', this.record, {
+            headers: {Authorization: this.authString},
+          })
           .then(request => this.appendRecordResult(request))
-          .catch(err => this.reportError(err.response.data))
+          .catch(err => this.reportError(err.response.data));
       }
     },
 
-    deleteRecord (index) {
-      var that = this
+    deleteRecord(index) {
+      var that = this;
 
       let confirmFn = function() {
-        that.$http.delete('api/records/' + that.records[index].id, {headers: {'Authorization': that.currentUser.getAuth()}})
+        that.$http
+          .delete('api/records/' + that.records[index].id, {
+            headers: {Authorization: that.authString},
+          })
           .then(() => that.removeRecordFromResult(index))
-          .catch(err => that.reportError(err.response.data))
-      }
+          .catch(err => that.reportError(err.response.data));
+      };
 
       let obj = {
-          title: 'Delete Test Result',
-          message: 'Are you sure you want to delete this test result?',
-          type: 'warning',
-          customConfirmBtnText:'Delete',
-          customConfirmBtnClass:'simplert__confirm simplert__confirm--radius bg-danger',
-          useConfirmBtn: true,
-          onConfirm: confirmFn
-      }
-      this.$refs.simplert.openSimplert(obj)
+        title: 'Delete Test Result',
+        message: 'Are you sure you want to delete this test result?',
+        type: 'warning',
+        customConfirmBtnText: 'Delete',
+        customConfirmBtnClass:
+          'simplert__confirm simplert__confirm--radius bg-danger',
+        useConfirmBtn: true,
+        onConfirm: confirmFn,
+      };
+      this.$refs.simplert.openSimplert(obj);
     },
 
     clearExistingRecord() {
-      this.record.age = ''
-      this.record.height = ''
-      this.record.weight = ''
-      this.record.cholesterol = ''
-      this.record.bloodPressure = ''
-			this.record.numberOfCysts = ''
-			this.record.baldness = ''
-			this.record.baldnessFromDisease = ''
+      this.record.age = '';
+      this.record.height = '';
+      this.record.weight = '';
+      this.record.cholesterol = '';
+      this.record.bloodPressure = '';
+      this.record.numberOfCysts = '';
+      this.record.baldness = '';
+      this.record.baldnessFromDisease = '';
     },
 
     appendRecordResult(req) {
       this.clearExistingRecord();
-      this.loading = false
-      this.records.push(req.data)
-      var container = this.$el.querySelector(".list-end")
-      container.scrollIntoView()
+      this.loading = false;
+      this.records.push(req.data);
+      var container = this.$el.querySelector('.list-end');
+      container.scrollIntoView();
     },
 
     removeRecordFromResult(index) {
       this.records.splice(index, 1);
     },
 
-    recordsLoaded (req) {
+    recordsLoaded(req) {
       this.records = req.data;
     },
-		
-		
+
     reportError(err) {
-      this.loading = false
-      this.error = err
-      var container = this.$el.querySelector(".container")
-      container.scrollIntoView()
+      this.loading = false;
+      this.error = err;
+      var container = this.$el.querySelector('.container');
+      container.scrollIntoView();
     },
 
     loadAPIError() {
-      this.$store.dispatch('logout')
-      this.$router.push('/')
+      this.$store.dispatch('logout');
+      this.$router.push('/');
     },
 
     requestTip(index) {
-      this.$http.post('/api/records/' + this.records[index].id + '/tip', null, {headers: {'Authorization': this.currentUser.getAuth()}})
+      this.$http
+        .post('/api/records/' + this.records[index].id + '/tip', null, {
+          headers: {Authorization: this.authString},
+        })
         .then(req => this.requestTipSuccess(req.data, index))
-        .catch(err => this.reportError(err.response.data))
+        .catch(err => this.reportError(err.response.data));
     },
 
     requestTipSuccess(record, index) {
-      this.records.splice(index, 1, record)
+      this.records.splice(index, 1, record);
       let obj = {
-          title: 'Request Sent',
-          message: 'Your request for a Health Tip was sent. You should receive a reponse in the next 48 hours.',
-          type: 'success'
-      }
-      this.$refs.simplert.openSimplert(obj)
+        title: 'Request Sent',
+        message:
+          'Your request for a Health Tip was sent. You should receive a reponse in the next 48 hours.',
+        type: 'success',
+      };
+      this.$refs.simplert.openSimplert(obj);
     },
 
     dismissError() {
-      this.error = false
+      this.error = false;
     },
 
-		showApprovalPopup(index) {
-			this.$modal.show(ApprovalPopup, {
-				recordId: this.records[index].id,
-				onCloseHandler: this.hideApprovalPopup,
-			}, {
-				name: 'insurance-approval',
-				adaptive:true,
-				width: 600,
-				height: 300
-			})
-		},
+    showApprovalPopup(index) {
+      this.$modal.show(
+        ApprovalPopup,
+        {
+          recordId: this.records[index].id,
+          onCloseHandler: this.hideApprovalPopup,
+        },
+        {
+          name: 'insurance-approval',
+          adaptive: true,
+          width: 600,
+          height: 300,
+        },
+      );
+    },
 
-		hideApprovalPopup() {
-			this.$modal.hide('insurance-approval')
-		}
-  }
-}
+    hideApprovalPopup() {
+      this.$modal.hide('insurance-approval');
+    },
+  },
+};
 </script>
 
 <!-- Add "scoped" attribute to limit CSS to this component only -->
