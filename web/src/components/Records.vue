@@ -146,7 +146,7 @@ export default {
   name: 'Records',
   components: {Simplert, ApprovalPopup, ErrorBar},
   computed: {
-    ...mapGetters(['authString']),
+    ...mapGetters(['authString', 'isAuthenticated']),
   },
   data() {
     return {
@@ -169,13 +169,14 @@ export default {
     };
   },
   created() {
+    debugger;
     this.checkCurrentLogin();
     this.fetchRecords();
   },
 
   methods: {
     checkCurrentLogin() {
-      if (!this.currentUser) {
+      if (!this.isAuthenticated) {
         this.$router.push('/');
       }
     },
@@ -264,6 +265,7 @@ export default {
     },
 
     loadAPIError() {
+      debugger;
       this.$store.dispatch('logout');
       this.$router.push('/');
     },

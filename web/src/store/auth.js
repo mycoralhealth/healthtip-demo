@@ -40,7 +40,6 @@ const getters = {
 
 const actions = {
   login({commit}) {
-    debugger;
     let authResult = localStorage.getItem('authResult');
     if (authResult) {
       localStorage.removeItem('authResult');
