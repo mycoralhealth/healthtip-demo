@@ -1,6 +1,7 @@
 package healthtip
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"io/ioutil"
@@ -15,6 +16,7 @@ import (
 	"github.com/rs/cors"
 	joseutil "github.com/square/go-jose"
 	"gopkg.in/square/go-jose.v2"
+	"gopkg.in/square/go-jose.v2/jwt"
 )
 
 func Run(dbCon *sql.DB) error {
@@ -73,13 +75,19 @@ func authMiddleware(next func(w http.ResponseWriter, r *http.Request)) func(w ht
 
 		token, err := validator.ValidateRequest(r)
 
+		// Determine user Id.
+		claims := jwt.Claims{}
+		token.Claims(secret, &claims)
+		userId := strings.Split(claims.Subject, "|")[1]
+		ctx := context.WithValue(r.Context(), "userId", userId)
+
 		if err != nil {
 			log.Println(err)
 			log.Println("Token is not valid:", token)
 			w.WriteHeader(http.StatusUnauthorized)
 			w.Write([]byte("Unauthorized"))
 		} else {
-			next(w, r)
+			next(w, r.WithContext(ctx))
 		}
 	}
 }
@@ -96,10 +104,6 @@ func makeMuxRouter(dbCon *sql.DB) http.Handler {
 	}
 
 	muxRouter := mux.NewRouter()
-	muxRouter.HandleFunc("/users", wrap(handleWriteUser)).Methods("POST")
-	muxRouter.HandleFunc("/users", wrap(handleUpdateUser)).Methods("PUT")
-	muxRouter.HandleFunc("/login", wrap(handleLogin)).Methods("POST")
-	muxRouter.HandleFunc("/api/logout", apiAuth(handleLogout)).Methods("POST")
 	muxRouter.HandleFunc("/api/records", apiAuth(handleRecords)).Methods("GET")
 	muxRouter.HandleFunc("/api/records", apiAuth(handleRecords)).Methods("POST")
 	muxRouter.HandleFunc("/api/records/{id:[0-9]+}", apiAuth(handleSingleRecord)).Methods("GET")
@@ -111,9 +115,6 @@ func makeMuxRouter(dbCon *sql.DB) http.Handler {
 	muxRouter.HandleFunc("/api/companies/{companyId:[0-9]+}/procedures/{procedureId:[0-9]+}/policy",
 		apiAuth(handleCompanyPolicy)).Methods("GET")
 	muxRouter.HandleFunc("/api/procedures", apiAuth(handleProcedures)).Methods("GET")
-	muxRouter.HandleFunc("/resetPassword", wrap(handleResetPassword)).Methods("POST")
-	muxRouter.HandleFunc("/claimToken", wrap(handleClaimToken)).Methods("POST")
-	muxRouter.HandleFunc("/changePassword", apiAuth(handleChangePassword)).Methods("POST")
 
 	return muxRouter
 }
