@@ -9,7 +9,7 @@ import (
 	"gopkg.in/mailgun/mailgun-go.v1"
 )
 
-func emailHealthTipRequest(userId string, record Record) error {
+func emailHealthTipRequest(userinfo UserInfo, record Record) error {
 
 	log.Println(os.Getenv("MG_DOMAIN"))
 	log.Println(os.Getenv("MG_API_KEY"))
@@ -21,8 +21,8 @@ func emailHealthTipRequest(userId string, record Record) error {
 	message := mg.NewMessage(
 		"Health Tips <no-reply@mail.mycoralhealth.com>",
 		"New Health Tip Request",
-		"Hello, you received a new Health Tip request. Details as follows.\n\nUser: "+userId+ //+user.FirstName+" "+user.LastName+
-			//"\nEmail: "+user.Email+"\n"+
+		"Hello, you received a new Health Tip request. Details as follows.\n\nUser: "+userinfo.Name+ //+user.FirstName+" "+user.LastName+
+			"\nEmail: "+userinfo.Email+"\n"+
 			"Test result details: \n"+
 			"  Age: "+strconv.Itoa(record.Age)+"\n"+
 			"  Height: "+strconv.Itoa(record.Height)+"\n"+

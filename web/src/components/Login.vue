@@ -5,22 +5,9 @@
         <img class="logo" src="../assets/logo.png">
         <h2 class="form-signin-heading">Health Tips</h2>
         <div class="alert alert-danger" v-if="error">{{ error }}</div>
-        <label for="inputEmail" class="sr-only">Email address</label>
-        <input v-model="email" type="email" id="inputEmail" class="form-control" placeholder="Email address" required autofocus>
-        <label for="inputPassword" class="sr-only">Password</label>
-        <input v-model="password" type="password" id="inputPassword" class="form-control" placeholder="Password" required>
-        <button class="btn btn-lg btn-primary btn-block" :disabled="loading" type="submit"><i class="fa fa-refresh fa-spin" v-if="loading"></i><div v-else="loading">Sign-in</div></button>
-        <small><a href="/forgot">I forgot my password</a></small>
-
-        <p class="sign-up">
-          Not a member yet?
-          <br>
-          <a href="/signup">Sign-up</a>
-        </p>
-
+				<button class="btn btn-lg btn-primary btn-block" @click="login" :disabled="loading" type="button"><i class="fa fa-refresh fa-spin" v-if="loading"></i><div v-else="loading">Sign-in</div></button>
         <p class="text-muted copy"><small>Copyright &copy; 2018 <a href="https://mycoralhealth.com">Coral Health</a></small></p>
       </form>
-      <button class="btn btn-lg btn-primary btn-block" @click="login2" :disabled="loading" type="submit"><i class="fa fa-refresh fa-spin" v-if="loading"></i><div v-else="loading">Auth0 Sign-in</div></button>
     </div>
   </div>
 </template>
@@ -54,43 +41,8 @@ export default {
         this.$router.replace(this.$route.query.redirect || '/records');
       }
     },
-    login2() {
-      this.auth.login();
-    },
     login() {
-      this.loading = true;
-      this.$http
-        .post(
-          '/login',
-          {email: this.email, password: this.password},
-          {
-            headers: {
-              Authorization: 'Basic ' + btoa(this.email + ':' + this.password),
-            },
-          },
-        )
-        .then(request => this.loginSuccessful(request))
-        .catch(() => this.loginFailed());
-    },
-    loginSuccessful(req) {
-      this.loading = false;
-
-      if (typeof req.data.token === 'undefined' || req.data.token === null) {
-        this.loginFailed();
-        return;
-      }
-
-      this.error = false;
-
-      localStorage.result = JSON.stringify(req.data);
-      this.$store.dispatch('login');
-      this.$router.replace(this.$route.query.redirect || '/records');
-    },
-    loginFailed() {
-      this.loading = false;
-      this.error = 'Invalid email address or password';
-      this.$store.dispatch('logout');
-      delete localStorage.result;
+      this.auth.login();
     },
   },
 };

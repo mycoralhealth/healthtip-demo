@@ -1,5 +1,11 @@
 package healthtip
 
+// Information about the current user.
+type UserInfo struct {
+	Name  string `json:"name,omitempty"`
+	Email string `json:"email,omitempty"`
+}
+
 // Database record indicating the last tip timestamp for a given user.
 type Tips struct {
 	UserId    string `json:"userId,omitempty"`

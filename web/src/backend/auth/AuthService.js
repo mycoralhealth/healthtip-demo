@@ -13,7 +13,7 @@ export default class AuthService {
     redirectUri: 'http://localhost:8080/callback',
     audience: 'https://tips.mycoralhealth.com/api/',
     responseType: 'token id_token',
-    scope: 'openid',
+    scope: 'openid email profile',
   });
 
   login() {

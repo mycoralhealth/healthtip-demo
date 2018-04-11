@@ -4,14 +4,14 @@ import * as MutationTypes from './mutation-types';
 
 const state = {
   accessToken: localStorage.getItem('access_token'),
-  idToken: localStorage.getItem('id_token'),
+  idToken: JSON.parse(localStorage.getItem('id_token_payload')),
   expiresAt: localStorage.getItem('expires_at'),
 };
 
 const mutations = {
   [MutationTypes.LOGIN](state) {
     state.accessToken = localStorage.getItem('access_token');
-    state.idToken = localStorage.getItem('id_token');
+    state.idToken = JSON.parse(localStorage.getItem('id_token_payload'));
     state.expiresAt = localStorage.getItem('expires_at');
   },
   [MutationTypes.LOGOUT](state) {
@@ -49,7 +49,10 @@ const actions = {
         authResult.expiresIn * 1000 + new Date().getTime(),
       );
       localStorage.setItem('access_token', authResult.accessToken);
-      localStorage.setItem('id_token', authResult.idToken);
+      localStorage.setItem(
+        'id_token_payload',
+        JSON.stringify(authResult.idTokenPayload),
+      );
       localStorage.setItem('expires_at', expiresAt);
       commit(MutationTypes.LOGIN);
     }

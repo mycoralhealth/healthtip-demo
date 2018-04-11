@@ -110,6 +110,15 @@ func handleRecordTip(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 	vars := mux.Vars(r)
 	Id, err := strconv.Atoi(vars["id"])
 
+	// Retrieve userinfo from the body.
+	var userinfo UserInfo
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&userinfo); err != nil {
+		handleError(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	defer r.Body.Close()
+
 	if err != nil {
 		handleError(w, r, http.StatusNotFound, err.Error())
 		return
@@ -144,7 +153,7 @@ func handleRecordTip(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 		}
 	}
 
-	mailErr := emailHealthTipRequest(userId, record)
+	mailErr := emailHealthTipRequest(userinfo, record)
 
 	if mailErr != nil {
 		handleError(w, r, http.StatusUnprocessableEntity, "Unable to send email. Please contact Coral Health.")

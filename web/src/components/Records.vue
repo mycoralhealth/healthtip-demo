@@ -146,7 +146,7 @@ export default {
   name: 'Records',
   components: {Simplert, ApprovalPopup, ErrorBar},
   computed: {
-    ...mapGetters(['authString', 'isAuthenticated']),
+    ...mapGetters(['authString', 'currentUser', 'isAuthenticated']),
   },
   data() {
     return {
@@ -272,9 +272,13 @@ export default {
 
     requestTip(index) {
       this.$http
-        .post('/api/records/' + this.records[index].id + '/tip', null, {
-          headers: {Authorization: this.authString},
-        })
+        .post(
+          '/api/records/' + this.records[index].id + '/tip',
+          {name: this.currentUser.name, email: this.currentUser.email},
+          {
+            headers: {Authorization: this.authString},
+          },
+        )
         .then(req => this.requestTipSuccess(req.data, index))
         .catch(err => this.reportError(err.response.data));
     },
