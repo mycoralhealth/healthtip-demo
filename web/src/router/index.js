@@ -17,6 +17,7 @@ export default new Router({
       path: '/',
       name: 'Login',
       component: Login,
+      props: true,
     },
     {
       path: '/callback',

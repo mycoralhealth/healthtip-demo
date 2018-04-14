@@ -17,12 +17,11 @@ import {mapGetters, mapActions} from 'vuex';
 
 export default {
   name: 'Login',
-  props: ['auth'],
+  props: ['auth', 'error'],
   data() {
     return {
       email: '',
       password: '',
-      error: false,
       loading: false,
     };
   },

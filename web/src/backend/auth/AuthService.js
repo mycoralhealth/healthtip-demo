@@ -22,14 +22,16 @@ export default class AuthService {
   }
 
   handleAuthentication() {
+    var error = {};
     this.auth0.parseHash((err, authResult) => {
       if (authResult && authResult.accessToken && authResult.idToken) {
         localStorage.setItem('authResult', JSON.stringify(authResult));
       } else if (err) {
         console.log(err);
-        // alert(`Error: ${err.error}. Check the console for further details.`);
+        error = err;
       }
     });
+    return error;
   }
 
   isAuthenticated() {

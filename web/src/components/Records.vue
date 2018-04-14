@@ -265,7 +265,10 @@ export default {
 
     loadAPIError() {
       this.$store.dispatch('logout');
-      this.$router.push('/');
+      this.$router.push({
+        name: 'Login',
+        params: {error: 'Remote server unavailable. Please try again later.'},
+      });
     },
 
     requestTip(index) {
