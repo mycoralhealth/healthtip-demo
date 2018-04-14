@@ -1,10 +1,11 @@
 import auth0 from 'auth0-js';
+import router from '@/router';
+import store from '@/store';
 import {AUTH0_CONFIG} from './auth0-variables';
 
 export default class AuthService {
   constructor() {
     this.login = this.login.bind(this);
-    this.isAuthenticated = this.isAuthenticated.bind(this);
     this.handleAuthentication = this.handleAuthentication.bind(this);
   }
 
@@ -22,22 +23,23 @@ export default class AuthService {
   }
 
   handleAuthentication() {
-    var error = {};
     this.auth0.parseHash((err, authResult) => {
+      let error = null;
       if (authResult && authResult.accessToken && authResult.idToken) {
         localStorage.setItem('authResult', JSON.stringify(authResult));
       } else if (err) {
         console.log(err);
         error = err;
       }
+      this.loginHandler(err);
     });
-    return error;
   }
 
-  isAuthenticated() {
-    // Check whether the current time is past the
-    // Access Token's expiry time
-    let expiresAt = JSON.parse(localStorage.getItem('expires_at'));
-    return new Date().getTime() < expiresAt;
+  loginHandler(err) {
+    if (err) {
+      router.push({name: 'Login', params: {error: error}});
+    }
+    store.dispatch('login');
+    router.push('/');
   }
 }

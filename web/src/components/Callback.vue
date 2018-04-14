@@ -10,12 +10,7 @@ export default {
   name: 'Callback',
   props: ['auth'],
   mounted() {
-    let error = this.auth.handleAuthentication();
-    if (error) {
-      this.$router.push({name: 'Login', params: {error: error}});
-    }
-    this.login();
-    this.$router.push('/');
+    this.auth.handleAuthentication();
   },
   data() {
     return {};
