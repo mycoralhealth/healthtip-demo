@@ -1,13 +1,13 @@
 <template>
   <div id="app">
-    <template v-if="currentUser">
+    <template v-if="isAuthenticated">
       <Navbar></Navbar>
     </template>
     <div class="container">
       <router-view 
 				:auth="auth">
 			</router-view>
-      <template v-if="currentUser">
+      <template v-if="isAuthenticated">
         <Footer></Footer>
       </template>
     </div>
@@ -22,11 +22,11 @@ import AuthService from '@/backend/auth/AuthService';
 export default {
   name: 'app',
   computed: {
-    ...mapGetters({currentUser: 'currentUser'}),
+    ...mapGetters(['isAuthenticated']),
     auth: () => new AuthService(),
   },
   created() {
-    console.log(this.currentUser);
+    console.log(this.isAuthenticated);
   },
   created() {
     this.checkCurrentLogin();
@@ -36,15 +36,9 @@ export default {
   },
   methods: {
     checkCurrentLogin() {
-      var unprotectedRoutes = [
-        '/',
-        '/callback',
-        '/signup',
-        '/forgot',
-        '/changePass',
-      ];
+      var unprotectedRoutes = ['/', '/callback'];
       if (
-        !this.currentUser &&
+        !this.isAuthenticated &&
         unprotectedRoutes.indexOf(this.$route.path) < 0
       ) {
         this.$router.push('/');

@@ -169,7 +169,6 @@ export default {
     };
   },
   created() {
-    debugger;
     this.checkCurrentLogin();
     this.fetchRecords();
   },
@@ -265,7 +264,6 @@ export default {
     },
 
     loadAPIError() {
-      debugger;
       this.$store.dispatch('logout');
       this.$router.push('/');
     },
