@@ -1,4 +1,5 @@
 import auth0 from 'auth0-js';
+import {AUTH0_CONFIG} from './auth0-variables';
 
 export default class AuthService {
   constructor() {
@@ -8,12 +9,12 @@ export default class AuthService {
   }
 
   auth0 = new auth0.WebAuth({
-    domain: 'mycoralhealth.auth0.com',
-    clientID: 'n0gKuFFCKyJIKeW4miwDyPdfqCJ9yt7q',
-    redirectUri: 'http://localhost:8080/callback',
-    audience: 'https://tips.mycoralhealth.com/api/',
-    responseType: 'token id_token',
-    scope: 'openid email profile',
+    domain: AUTH0_CONFIG.domain,
+    clientID: AUTH0_CONFIG.clientID,
+    redirectUri: AUTH0_CONFIG.redirectUri,
+    audience: AUTH0_CONFIG.audience,
+    responseType: AUTH0_CONFIG.responseType,
+    scope: AUTH0_CONFIG.scope,
   });
 
   login() {
