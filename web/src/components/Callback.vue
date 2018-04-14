@@ -4,8 +4,6 @@
 </template>
 
 <script>
-import {mapActions} from 'vuex';
-
 export default {
   name: 'Callback',
   props: ['auth'],
@@ -14,10 +12,6 @@ export default {
   },
   data() {
     return {};
-  },
-
-  methods: {
-    ...mapActions(['login']),
   },
 };
 </script>
