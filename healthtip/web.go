@@ -75,20 +75,19 @@ func authMiddleware(next func(w http.ResponseWriter, r *http.Request)) func(w ht
 
 		token, err := validator.ValidateRequest(r)
 
+		if err != nil {
+			log.Println(err)
+			log.Println("Token is not valid:", token)
+			handleError(w, r, http.StatusUnauthorized, "Unauthorized")
+			return
+		}
+
 		// Determine user Id.
 		claims := jwt.Claims{}
 		token.Claims(secret, &claims)
 		userId := strings.Split(claims.Subject, "|")[1]
 		ctx := context.WithValue(r.Context(), "userId", userId)
-
-		if err != nil {
-			log.Println(err)
-			log.Println("Token is not valid:", token)
-			w.WriteHeader(http.StatusUnauthorized)
-			w.Write([]byte("Unauthorized"))
-		} else {
-			next(w, r.WithContext(ctx))
-		}
+		next(w, r.WithContext(ctx))
 	}
 }
 
