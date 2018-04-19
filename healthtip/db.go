@@ -1,140 +1,34 @@
 package healthtip
 
 import (
-	"crypto/sha256"
 	"database/sql"
-	"encoding/hex"
 	"fmt"
-	"strings"
 )
 
-func writeUser(dbCon *sql.DB, u User) (int64, error) {
-
-	// check if user exists and return error if it does
-	// if checkUserExists function does NOT throw an error it means the user already exists
-	if _, err := checkUserExists(dbCon, u); err == nil {
-		return 0, fmt.Errorf("user %v already exists", u.Email)
+func getUserTip(dbCon *sql.DB, userId string) (int64, error) {
+	var timestamp int64
+	if err := dbCon.QueryRow(`SELECT timestamp FROM tips WHERE user_id = $1;`, userId).Scan(&timestamp); err == sql.ErrNoRows {
+		return 0, fmt.Errorf("User id %v has no tips.", userId)
 	}
-
-	result, err := dbCon.Exec(`INSERT INTO users (email, first_name, last_name, password, last_tip_epoch) VALUES ($1, $2, $3, $4, 0);`, u.Email, u.FirstName, u.LastName, hashPassword(u.Password))
-	if err != nil {
-		return 0, fmt.Errorf("couldn't insert %v into users table: %v", u.Email, err)
-	}
-
-	Id, err := result.LastInsertId()
-	if err != nil {
-		return 0, fmt.Errorf("couldn't retrieve Id of insert user %v : %v", u.Email, err)
-	}
-
-	return Id, nil
+	return timestamp, nil
 }
 
-func writeAuthToken(dbCon *sql.DB, auth AuthToken) error {
-	_, err := dbCon.Exec(`INSERT INTO auth_tokens (api_user, api_key) VALUES ($1, $2);`, auth.ApiUser, auth.ApiKey)
-	if err != nil {
-		return fmt.Errorf("couldn't insert auth token for user: %v inth auth table", auth.ApiUser)
-	}
-
-	return nil
-}
-
-func checkAPIAuth(dbCon *sql.DB, auth AuthToken) error {
-
-	var a AuthToken
-	if err := dbCon.QueryRow(`SELECT * FROM auth_tokens WHERE api_user = $1 AND api_key = $2;`, auth.ApiUser, auth.ApiKey).Scan(&a); err == sql.ErrNoRows {
-		return fmt.Errorf("Incorrect API token for user: %v", auth.ApiUser)
+func updateUserTipTime(dbCon *sql.DB, userId string, lastTip, now int64) error {
+	if lastTip != 0 {
+		if _, err := dbCon.Exec(`INSERT INTO tips (user_id, timestamp) VALUES ($1, $2);`, userId, now); err != nil {
+			return fmt.Errorf("Could not insert tip record for user %v: %v", userId, err)
+		}
+	} else {
+		if _, err := dbCon.Exec(`UPDATE tips SET timestamp = $1 WHERE user_id = $2;`, now, userId); err != nil {
+			return fmt.Errorf("Could not update tip record for user %v: %v", userId, err)
+		}
 	}
 	return nil
 }
 
-// returnAuthToken fills out the Auth_user if only the Auth_key is available
-func returnAuthUserId(dbCon *sql.DB, auth AuthToken) (int, error) {
-
-	var a AuthToken
-	if err := dbCon.QueryRow(`SELECT * FROM auth_tokens WHERE api_key = $1;`, auth.ApiKey).Scan(&a.ApiUser, &a.ApiKey); err == sql.ErrNoRows {
-		return 0, fmt.Errorf("Invalid token")
-	}
-	return a.ApiUser, nil
-}
-
-func deleteAuthToken(dbCon *sql.DB, auth AuthToken) error {
-	_, err := dbCon.Exec(`DELETE FROM auth_tokens WHERE Api_user = $1;`, auth.ApiUser)
-
-	if err != nil {
-		return fmt.Errorf("couldn't delete user %v in auth_tokens table", auth.ApiUser)
-	}
-
-	return nil
-}
-
-func updateUser(dbCon *sql.DB, u User) error {
-
-	_, err := dbCon.Exec(`UPDATE users SET first_name = $1, last_name = $2, password = $3 WHERE ROWID = $4 ;`, u.FirstName, u.LastName, hashPassword(u.Password), u.Id)
-	if err != nil {
-		return fmt.Errorf("couldn't update %v in users table: %v", u.Email, err)
-	}
-
-	return nil
-}
-
-func updateUserTipTime(dbCon *sql.DB, u User) error {
-
-	_, err := dbCon.Exec(`UPDATE users SET last_tip_epoch = $1 WHERE ROWID = $2 ;`, u.LastTip, u.Id)
-	if err != nil {
-		return fmt.Errorf("couldn't update %v in users table: %v", u.Email, err)
-	}
-
-	return nil
-}
-
-func updateUserPassword(dbCon *sql.DB, u User) error {
-
-	_, err := dbCon.Exec(`UPDATE users SET password = $1 WHERE ROWID = $2 ;`, hashPassword(u.Password), u.Id)
-	if err != nil {
-		return fmt.Errorf("couldn't update %v in users table: %v", u.Email, err)
-	}
-
-	return nil
-}
-
-func checkUserExists(dbCon *sql.DB, u User) (User, error) {
-	var user User
-	if err := dbCon.QueryRow(`SELECT ROWID, email, first_name, last_name, password FROM users WHERE email = $1;`, strings.ToLower(u.Email)).Scan(&user.Id, &user.Email, &user.FirstName, &user.LastName, &user.Password); err == sql.ErrNoRows {
-		return user, fmt.Errorf("The account doesn't exit: %v", u.Email)
-	}
-
-	return user, nil
-}
-
-func findUser(dbCon *sql.DB, Id int) (User, error) {
-	var user User
-	if err := dbCon.QueryRow(`SELECT ROWID, email, first_name, last_name FROM users WHERE ROWID = $1;`, Id).Scan(&user.Id, &user.Email, &user.FirstName, &user.LastName); err == sql.ErrNoRows {
-		return user, fmt.Errorf("user not found: %v", Id)
-	}
-
-	return user, nil
-}
-
-func getUserForId(dbCon *sql.DB, userId int) (User, error) {
-	var user User
-	if err := dbCon.QueryRow(`SELECT ROWID, * FROM users WHERE ROWID = $1;`, userId).Scan(&user.Id, &user.Email, &user.FirstName, &user.LastName, &user.Password, &user.LastTip); err == sql.ErrNoRows {
-		return user, fmt.Errorf("user not found: %v", userId)
-	}
-
-	return user, nil
-}
-
-func checkLoginAuth(dbCon *sql.DB, u User) error {
-	var usr User
-	if err := dbCon.QueryRow(`SELECT * FROM users WHERE email = $1 AND password = $2;`, strings.ToLower(u.Email), hashPassword(u.Password)).Scan(&usr); err == sql.ErrNoRows {
-		return fmt.Errorf("user not found: %v", u.Id)
-	}
-	return nil
-}
-
-func getAllRecords(userId int, dbCon *sql.DB) ([]Record, error) {
+func getAllRecords(userId string, dbCon *sql.DB) ([]Record, error) {
 	records := make([]Record, 0)
-	rows, err := dbCon.Query(`SELECT ROWID, * FROM records WHERE User_id= $1;`, userId)
+	rows, err := dbCon.Query(`SELECT ROWID, * FROM records WHERE user_id= $1;`, userId)
 	if err != nil {
 		return records, err
 	}
@@ -184,7 +78,7 @@ func deleteRecord(dbCon *sql.DB, Id int) error {
 
 func updateRecord(dbCon *sql.DB, record Record) error {
 
-	if err := checkRecordExists(dbCon, record.UserId); err != nil {
+	if err := checkRecordExists(dbCon, record.Id); err != nil {
 		return err
 	}
 
@@ -286,12 +180,4 @@ func getPolicyFile(db *sql.DB, companyId, procedureId int) (string, []byte, erro
 		return "", nil, err
 	}
 	return name, bytes, nil
-}
-
-func hashPassword(password string) string {
-	hash := sha256.New()
-	saltedPassword := "$%&*)(@#$)(*%@" + password + "%#$(*&#$%(*&@#)%"
-	hash.Write([]byte(saltedPassword))
-	md := hash.Sum(nil)
-	return hex.EncodeToString(md)
 }

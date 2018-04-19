@@ -1,11 +1,13 @@
 <template>
   <div id="app">
-    <template v-if="currentUser">
+    <template v-if="isAuthenticated">
       <Navbar></Navbar>
     </template>
     <div class="container">
-      <router-view></router-view>
-      <template v-if="currentUser">
+      <router-view 
+				:auth="auth">
+			</router-view>
+      <template v-if="isAuthenticated">
         <Footer></Footer>
       </template>
     </div>
@@ -13,35 +15,40 @@
 </template>
 
 <script>
-import Navbar from '@/components/Navbar'
-import { mapGetters } from 'vuex'
+import Navbar from '@/components/Navbar';
+import {mapGetters, mapActions} from 'vuex';
+import AuthService from '@/backend/auth/AuthService';
 
 export default {
   name: 'app',
   computed: {
-    ...mapGetters({ currentUser: 'currentUser' })
+    ...mapGetters(['isAuthenticated']),
+    auth: () => new AuthService(),
   },
-  created () {
-    console.log(this.currentUser)
+  created() {
+    console.log(this.isAuthenticated);
   },
-  created () {
-    this.checkCurrentLogin()
+  created() {
+    this.checkCurrentLogin();
   },
-  updated () {
-    this.checkCurrentLogin()
+  updated() {
+    this.checkCurrentLogin();
   },
   methods: {
-    checkCurrentLogin () {
-      var unprotectedRoutes = ['/', '/signup', '/forgot', '/changePass']
-      if (!this.currentUser && (unprotectedRoutes.indexOf(this.$route.path) < 0)) {
-        this.$router.push('/')
+    checkCurrentLogin() {
+      var unprotectedRoutes = ['/', '/callback'];
+      if (
+        !this.isAuthenticated &&
+        unprotectedRoutes.indexOf(this.$route.path) < 0
+      ) {
+        this.$router.push('/');
       }
-    }
+    },
   },
   components: {
-    Navbar
-  }
-}
+    Navbar,
+  },
+};
 </script>
 
 <style>

@@ -1,16 +1,22 @@
 package healthtip
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"strings"
 	"time"
 
+	"github.com/auth0-community/auth0"
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
+	joseutil "github.com/square/go-jose"
+	"gopkg.in/square/go-jose.v2"
+	"gopkg.in/square/go-jose.v2/jwt"
 )
 
 func Run(dbCon *sql.DB) error {
@@ -47,6 +53,44 @@ func Run(dbCon *sql.DB) error {
 	return nil
 }
 
+func authMiddleware(next func(w http.ResponseWriter, r *http.Request)) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		sharedKeyPath := os.Getenv("AUTH0_PUBLIC_KEY_PATH")
+		audience := []string{os.Getenv("AUTH0_AUDIENCE")}
+		sharedKey, err := ioutil.ReadFile(sharedKeyPath)
+		if err != nil {
+			log.Println("PEM file at " + sharedKeyPath + " could not be read")
+			handleError(w, r, http.StatusInternalServerError, "Internal error")
+			return
+		}
+		secret, err := joseutil.LoadPublicKey(sharedKey)
+		if err != nil {
+			log.Println("Could not load public key from PEM file.")
+			handleError(w, r, http.StatusInternalServerError, "Internal error")
+			return
+		}
+		secretProvider := auth0.NewKeyProvider(secret)
+		configuration := auth0.NewConfiguration(secretProvider, audience, "https://"+os.Getenv("AUTH0_DOMAIN")+".auth0.com/", jose.RS256)
+		validator := auth0.NewValidator(configuration, nil)
+
+		token, err := validator.ValidateRequest(r)
+
+		if err != nil {
+			log.Println(err)
+			log.Println("Token is not valid:", token)
+			handleError(w, r, http.StatusUnauthorized, "Unauthorized")
+			return
+		}
+
+		// Determine user Id.
+		claims := jwt.Claims{}
+		token.Claims(secret, &claims)
+		userId := strings.Split(claims.Subject, "|")[1]
+		ctx := context.WithValue(r.Context(), "userId", userId)
+		next(w, r.WithContext(ctx))
+	}
+}
+
 func makeMuxRouter(dbCon *sql.DB) http.Handler {
 	wrap := func(f func(w http.ResponseWriter, r *http.Request, dbCon *sql.DB)) func(w http.ResponseWriter, r *http.Request) {
 		return func(w http.ResponseWriter, r *http.Request) {
@@ -55,27 +99,10 @@ func makeMuxRouter(dbCon *sql.DB) http.Handler {
 	}
 
 	apiAuth := func(f func(w http.ResponseWriter, r *http.Request, dbCon *sql.DB)) func(w http.ResponseWriter, r *http.Request) {
-		return func(w http.ResponseWriter, r *http.Request) {
-			apiToken, err := getBasicAPIAuth(r)
-			if err != nil {
-				handleError(w, r, http.StatusUnauthorized, err.Error())
-				return
-			}
-
-			if err := checkAPIAuth(dbCon, apiToken); err != nil {
-				handleError(w, r, http.StatusUnauthorized, "Unauthorized")
-				return
-			}
-
-			f(w, r, dbCon)
-		}
+		return authMiddleware(wrap(f))
 	}
 
 	muxRouter := mux.NewRouter()
-	muxRouter.HandleFunc("/users", wrap(handleWriteUser)).Methods("POST")
-	muxRouter.HandleFunc("/users", wrap(handleUpdateUser)).Methods("PUT")
-	muxRouter.HandleFunc("/login", wrap(handleLogin)).Methods("POST")
-	muxRouter.HandleFunc("/api/logout", apiAuth(handleLogout)).Methods("POST")
 	muxRouter.HandleFunc("/api/records", apiAuth(handleRecords)).Methods("GET")
 	muxRouter.HandleFunc("/api/records", apiAuth(handleRecords)).Methods("POST")
 	muxRouter.HandleFunc("/api/records/{id:[0-9]+}", apiAuth(handleSingleRecord)).Methods("GET")
@@ -87,9 +114,6 @@ func makeMuxRouter(dbCon *sql.DB) http.Handler {
 	muxRouter.HandleFunc("/api/companies/{companyId:[0-9]+}/procedures/{procedureId:[0-9]+}/policy",
 		apiAuth(handleCompanyPolicy)).Methods("GET")
 	muxRouter.HandleFunc("/api/procedures", apiAuth(handleProcedures)).Methods("GET")
-	muxRouter.HandleFunc("/resetPassword", wrap(handleResetPassword)).Methods("POST")
-	muxRouter.HandleFunc("/claimToken", wrap(handleClaimToken)).Methods("POST")
-	muxRouter.HandleFunc("/changePassword", apiAuth(handleChangePassword)).Methods("POST")
 
 	return muxRouter
 }

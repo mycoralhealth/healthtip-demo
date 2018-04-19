@@ -2,284 +2,26 @@ package healthtip
 
 import (
 	"bytes"
-	"crypto/rand"
 	"database/sql"
-	"encoding/base32"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/gorilla/mux"
 	"io"
 	"net/http"
-	"net/url"
 	"os"
 	"strconv"
 	"time"
 )
 
-func makeLoginResult(user User, auth AuthToken) LoginResult {
-	var result LoginResult
-
-	result.Token = auth
-	result.Email = user.Email
-	result.FirstName = user.FirstName
-	result.LastName = user.LastName
-
-	return result
-}
-
-func handleWriteUser(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
-	var user User
-
-	decoder := json.NewDecoder(r.Body)
-	if err := decoder.Decode(&user); err != nil {
-		handleError(w, r, http.StatusBadRequest, err.Error())
-		return
-	}
-	defer r.Body.Close()
-
-	if len(user.Password) < 6 {
-		handleError(w, r, http.StatusUnprocessableEntity, "Minimum password length is 6 characters")
-		return
-	}
-
-	lastId, err := writeUser(dbCon, user)
-	if err != nil {
-		handleError(w, r, http.StatusUnprocessableEntity, err.Error())
-		return
-	}
-
-	user.Id = int(lastId)
-	auth, err := createAuthToken(user.Id, dbCon)
-	if err != nil {
-		handleError(w, r, http.StatusUnprocessableEntity, err.Error())
-		return
-	}
-
-	respondWithJSON(w, r, http.StatusCreated, makeLoginResult(user, auth))
-}
-
-func createAuthToken(Id int, dbCon *sql.DB) (AuthToken, error) {
-	var auth AuthToken
-	// create auth token and put in DB
-	auth.ApiUser = Id
-	// generated salted hash from current time and random number is the auth token
-	token, err := getRandomString(10)
-	if err != nil {
-		return auth, err
-	}
-
-	auth.ApiKey = hashPassword(token)
-	if err := writeAuthToken(dbCon, auth); err != nil {
-		return auth, err
-	}
-
-	return auth, nil
-}
-
-func getRandomString(length int) (string, error) {
-	randomBytes := make([]byte, 32)
-	_, err := rand.Read(randomBytes)
-	if err != nil {
-		return "", err
-	}
-	return base32.StdEncoding.EncodeToString(randomBytes)[:length], nil
-}
-
-func handleUpdateUser(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
-	var user User
-
-	decoder := json.NewDecoder(r.Body)
-	if err := decoder.Decode(&user); err != nil {
-		handleError(w, r, http.StatusBadRequest, err.Error())
-		return
-	}
-	defer r.Body.Close()
-
-	auth, _ := getBasicAPIAuth(r)
-	user.Id = auth.ApiUser
-
-	if err := updateUser(dbCon, user); err != nil {
-		handleError(w, r, http.StatusUnprocessableEntity, err.Error())
-		return
-	}
-
-	respondWithJSON(w, r, http.StatusCreated, user.Email)
-}
-
-func handleLogin(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
-
-	user, err := getBasicLoginAuth(r)
-
-	if err != nil {
-		handleError(w, r, http.StatusUnauthorized, err.Error())
-		return
-	}
-
-	dbUser, err := checkUserExists(dbCon, user)
-
-	if err != nil {
-		handleError(w, r, 404, err.Error())
-		return
-	}
-
-	if err := checkLoginAuth(dbCon, user); err != nil {
-		handleError(w, r, http.StatusUnauthorized, "Unauthorized")
-		return
-	}
-
-	auth, err := createAuthToken(dbUser.Id, dbCon)
-	if err != nil {
-		handleError(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	respondWithJSON(w, r, http.StatusOK, makeLoginResult(dbUser, auth))
-}
-
-func handleChangePassword(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
-	auth, _ := getBasicAPIAuth(r)
-
-	var user User
-
-	decoder := json.NewDecoder(r.Body)
-	if err := decoder.Decode(&user); err != nil {
-		handleError(w, r, http.StatusBadRequest, err.Error())
-		return
-	}
-	defer r.Body.Close()
-
-	user.Id = auth.ApiUser
-	err := updateUserPassword(dbCon, user)
-	if err != nil {
-		handleError(w, r, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	respondWithJSON(w, r, http.StatusNoContent, nil)
-}
-
-func handleResetPassword(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
-	// request should send user object with just email
-	var user User
-
-	decoder := json.NewDecoder(r.Body)
-	if err := decoder.Decode(&user); err != nil {
-		handleError(w, r, http.StatusBadRequest, err.Error())
-		return
-	}
-	defer r.Body.Close()
-
-	dbUser, err := checkUserExists(dbCon, user)
-
-	if err != nil {
-		handleError(w, r, 404, err.Error())
-		return
-	}
-
-	auth, err := createAuthToken(dbUser.Id, dbCon)
-	if err != nil {
-		handleError(w, r, http.StatusUnprocessableEntity, err.Error())
-		return
-	}
-
-	url := os.Getenv("CLIENT_URL") + "changePass?token=" + url.QueryEscape(auth.ApiKey)
-	emailPasswordReset(dbUser, url)
-
-	respondWithJSON(w, r, http.StatusNoContent, nil)
-}
-
-func handleClaimToken(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
-
-	var auth AuthToken
-	decoder := json.NewDecoder(r.Body)
-	if err := decoder.Decode(&auth); err != nil {
-		handleError(w, r, http.StatusBadRequest, err.Error())
-		return
-	}
-	defer r.Body.Close()
-
-	userId, err := returnAuthUserId(dbCon, auth)
-	if err != nil {
-		handleError(w, r, 404, err.Error())
-		return
-	}
-
-	auth.ApiUser = userId
-
-	if err := deleteAuthToken(dbCon, auth); err != nil {
-		handleError(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	user, err := findUser(dbCon, userId)
-	if err != nil {
-		handleError(w, r, 404, err.Error())
-		return
-	}
-
-	newAuth, err := createAuthToken(user.Id, dbCon)
-	if err != nil {
-		handleError(w, r, http.StatusUnprocessableEntity, err.Error())
-		return
-	}
-
-	respondWithJSON(w, r, http.StatusOK, makeLoginResult(user, newAuth))
-}
-
-func getBasicLoginAuth(r *http.Request) (User, error) {
-	var user User
-
-	email, password, ok := r.BasicAuth()
-	if !ok {
-		return user, errors.New("Invalid login auth")
-	}
-
-	user.Email = email
-	user.Password = password
-
-	return user, nil
-}
-
-/*
-API handlers, authorization is handled in web.go wrapper function
-*/
-
-func getBasicAPIAuth(r *http.Request) (AuthToken, error) {
-	var token AuthToken
-
-	p, s, ok := r.BasicAuth()
-	if !ok {
-		return token, errors.New("invalid API Authorization token. Required Basic ApiUser:ApiKey")
-	}
-
-	apiUser, err := strconv.Atoi(p)
-	if err != nil {
-		return token, errors.New("invalid ApiUser")
-	}
-
-	token.ApiUser = apiUser
-	token.ApiKey = s
-
-	return token, nil
-}
-
-func handleLogout(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
-	auth, _ := getBasicAPIAuth(r)
-
-	if err := deleteAuthToken(dbCon, auth); err != nil {
-		handleError(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	respondWithJSON(w, r, http.StatusNoContent, nil)
+func getUserId(r *http.Request) string {
+	return r.Context().Value("userId").(string)
 }
 
 func handleRecords(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
-	auth, _ := getBasicAPIAuth(r)
+	userId := getUserId(r)
 
 	if r.Method == "GET" {
-		records, err := getAllRecords(auth.ApiUser, dbCon)
+		records, err := getAllRecords(userId, dbCon)
 		if err != nil {
 			handleError(w, r, http.StatusInternalServerError, err.Error())
 			return
@@ -302,7 +44,7 @@ func handleRecords(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 		}
 		defer r.Body.Close()
 
-		record.UserId = auth.ApiUser
+		record.UserId = userId
 		Id, err := writeRecord(dbCon, record)
 		if err != nil {
 			handleError(w, r, http.StatusInternalServerError, err.Error())
@@ -368,6 +110,15 @@ func handleRecordTip(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 	vars := mux.Vars(r)
 	Id, err := strconv.Atoi(vars["id"])
 
+	// Retrieve userinfo from the body.
+	var userinfo UserInfo
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&userinfo); err != nil {
+		handleError(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	defer r.Body.Close()
+
 	if err != nil {
 		handleError(w, r, http.StatusNotFound, err.Error())
 		return
@@ -384,19 +135,11 @@ func handleRecordTip(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 		return
 	}
 
-	auth, _ := getBasicAPIAuth(r)
+	userId := getUserId(r)
+	lastTip, _ := getUserTip(dbCon, userId)
+	now := time.Now().Unix()
 
-	dbUser, err := getUserForId(dbCon, auth.ApiUser)
-
-	if err != nil {
-		handleError(w, r, http.StatusNotFound, err.Error())
-		return
-	}
-
-	now := time.Now()
-
-	if dbUser.LastTip != 0 {
-		secs := now.Unix()
+	if lastTip != 0 {
 		interval, err := strconv.ParseInt(os.Getenv("TIP_INTERVAL"), 10, 64)
 
 		if err != nil {
@@ -404,21 +147,20 @@ func handleRecordTip(w http.ResponseWriter, r *http.Request, dbCon *sql.DB) {
 			return
 		}
 
-		if secs < (dbUser.LastTip + interval) {
+		if now < (lastTip + interval) {
 			handleError(w, r, http.StatusUnprocessableEntity, "You can only request one Health Tip every 24 hours.")
 			return
 		}
 	}
 
-	mailErr := emailHealthTipRequest(dbUser, record)
+	mailErr := emailHealthTipRequest(userinfo, record)
 
 	if mailErr != nil {
 		handleError(w, r, http.StatusUnprocessableEntity, "Unable to send email. Please contact Coral Health.")
 		return
 	}
 
-	dbUser.LastTip = now.Unix()
-	updateUserTipTime(dbCon, dbUser)
+	updateUserTipTime(dbCon, userId, lastTip, now)
 
 	record.TipSent = 1
 	updateRecord(dbCon, record)

@@ -1,34 +1,30 @@
 package healthtip
 
-// User is stored in DB
-type User struct {
-	Id        int    `json:"id,string,omitempty"`
-	Email     string `json:"email,omitempty"`
-	FirstName string `json:"firstName,omitempty"`
-	LastName  string `json:"lastName,omitempty"`
-	Password  string `json:"password,omitempty"`
-	LastTip   int64  `json:"lastTipEpoch,omitempty"`
+// Information about the current user.
+type UserInfo struct {
+	Name  string `json:"name,omitempty"`
+	Email string `json:"email,omitempty"`
 }
 
-// AuthToken is the session token
-type AuthToken struct {
-	ApiUser int    `json:"apiUser,string,omitempty"`
-	ApiKey  string `json:"apiKey,omitempty"`
+// Database record indicating the last tip timestamp for a given user.
+type Tips struct {
+	UserId    string `json:"userId,omitempty"`
+	Timestamp int64  `json:"timestamp"`
 }
 
 // Record is the lab test results of the user
 type Record struct {
-	Id                  int  `json:"id,string,omitempty"`
-	UserId              int  `json:"userId,string,omitempty"`
-	Age                 int  `json:"age,string,omitempty"`
-	Height              int  `json:"height,string,omitempty"`
-	Weight              int  `json:"weight,string,omitempty"`
-	Cholesterol         int  `json:"cholesterol,string,omitempty"`
-	BloodPressure       int  `json:"bloodPressure,string,omitempty"`
-	NumberOfCysts       int  `json:"numberOfCysts,string,omitempty"`
-	Baldness            bool `json:"baldness,omitempty"`
-	BaldnessFromDisease bool `json:"baldnessFromDisease,omitempty"`
-	TipSent             int  `json:"tipSent,string,omitempty"`
+	Id                  int    `json:"id,string,omitempty"`
+	UserId              string `json:"userId,omitempty"`
+	Age                 int    `json:"age,string,omitempty"`
+	Height              int    `json:"height,string,omitempty"`
+	Weight              int    `json:"weight,string,omitempty"`
+	Cholesterol         int    `json:"cholesterol,string,omitempty"`
+	BloodPressure       int    `json:"bloodPressure,string,omitempty"`
+	NumberOfCysts       int    `json:"numberOfCysts,string"`
+	Baldness            bool   `json:"baldness,omitempty"`
+	BaldnessFromDisease bool   `json:"baldnessFromDisease,omitempty"`
+	TipSent             int    `json:"tipSent,string,omitempty"`
 }
 
 // InsuranceCompany is a data representation of an insurance
@@ -54,12 +50,4 @@ type InsuranceApprovalRequest struct {
 type InsuranceApprovalResponse struct {
 	InsuranceApprovalRequest
 	Approved bool `json:"approved"`
-}
-
-// LoginResult is the model of an authorized login
-type LoginResult struct {
-	Token     AuthToken `json:"token,omitempty"`
-	Email     string    `json:"email,omitempty"`
-	FirstName string    `json:"firstName,omitempty"`
-	LastName  string    `json:"lastName,omitempty"`
 }

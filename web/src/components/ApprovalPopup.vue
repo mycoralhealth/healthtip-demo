@@ -58,113 +58,139 @@
 </template>
 
 <script>
-import { mapGetters } from 'vuex'
-import ErrorBar from './ErrorBar.vue'
-import checkmark from '../assets/icons8-checkmark.svg'
-import cancel from '../assets/icons8-cancel.svg'
+import {mapGetters} from 'vuex';
+import ErrorBar from './ErrorBar.vue';
+import checkmark from '../assets/icons8-checkmark.svg';
+import cancel from '../assets/icons8-cancel.svg';
 
 export default {
-	name: 'ApprovalPopup',
-	components: {ErrorBar},
-	props: ['recordId','onCloseHandler'],
+  name: 'ApprovalPopup',
+  components: {ErrorBar},
+  props: ['recordId', 'onCloseHandler'],
   computed: {
-    ...mapGetters({ currentUser: 'currentUser' })
+    ...mapGetters(['authString']),
   },
-	data() {
-		return {
-			formStage: 0,
-			approvalRequest: {
-				procedure: '',
-				company: ''
-			},
-			approvalResponse: {},
-			options: {
-				companies: [],
-				procedures:[],
-				loading:false
-			},
-			approvalImage: checkmark,
-			loading: false,
-			error: false
-		}
-	},
+  data() {
+    return {
+      formStage: 0,
+      approvalRequest: {
+        procedure: '',
+        company: '',
+      },
+      approvalResponse: {},
+      options: {
+        companies: [],
+        procedures: [],
+        loading: false,
+      },
+      approvalImage: checkmark,
+      loading: false,
+      error: false,
+    };
+  },
 
-	mounted() {
-		this.fetchApprovalOptions()
-	},
+  mounted() {
+    this.fetchApprovalOptions();
+  },
 
-	methods: {
-		submitApprovalRequest() {
-			this.$http.post('/api/records/' + this.recordId + '/approval', this.approvalRequest, {headers: {'Authorization': this.currentUser.getAuth()}})
-				.then(response => this.displayApprovalResults(response.data))
-				.catch(err => this.reportError(err));
-		},
+  methods: {
+    submitApprovalRequest() {
+      this.$http
+        .post(
+          '/api/records/' + this.recordId + '/approval',
+          this.approvalRequest,
+          {headers: {Authorization: this.authString}},
+        )
+        .then(response => this.displayApprovalResults(response.data))
+        .catch(err => this.reportError(err));
+    },
 
-		displayApprovalResults(response) {
-			this.approvalResponse = response;
-			if(response.approved === false) {
-				this.approvalImage = cancel;
-			} else {
-				this.approvalImage = checkmark;
-			}
-			this.formStage = 1; 
-		},
+    displayApprovalResults(response) {
+      this.approvalResponse = response;
+      if (response.approved === false) {
+        this.approvalImage = cancel;
+      } else {
+        this.approvalImage = checkmark;
+      }
+      this.formStage = 1;
+    },
 
-		generateApprovalText() {
-			const approved = this.approvalResponse.approved
-			var approvalText = "According to " + this.approvalResponse.company.name+"’s medical policy, "
-			approvalText = approvalText + "you " + (!approved ? "do not " : " ")
-			approvalText = approvalText + "qualify for " + this.approvalResponse.procedure.name + "."
-			return approvalText
-		},
+    generateApprovalText() {
+      const approved = this.approvalResponse.approved;
+      var approvalText =
+        'According to ' +
+        this.approvalResponse.company.name +
+        '’s medical policy, ';
+      approvalText = approvalText + 'you ' + (!approved ? 'do not ' : ' ');
+      approvalText =
+        approvalText +
+        'qualify for ' +
+        this.approvalResponse.procedure.name +
+        '.';
+      return approvalText;
+    },
 
-		fetchApprovalOptions() {
-			var that = this;
-			that.options.loading = true;
-			Promise.all([
-				that.$http.get('/api/companies', {headers: {'Authorization': this.currentUser.getAuth()}}),
-				that.$http.get('/api/procedures', {headers: {'Authorization': this.currentUser.getAuth()}})
-			]).then(function ([companies, procedures]) {
-				that.options.companies = companies.data;
-				that.options.procedures = procedures.data;
-				that.options.loading = false;
-			}).catch(err => this.reportError(err));
-		},
+    fetchApprovalOptions() {
+      var that = this;
+      that.options.loading = true;
+      Promise.all([
+        that.$http.get('/api/companies', {
+          headers: {Authorization: this.authString},
+        }),
+        that.$http.get('/api/procedures', {
+          headers: {Authorization: this.authString},
+        }),
+      ])
+        .then(function([companies, procedures]) {
+          that.options.companies = companies.data;
+          that.options.procedures = procedures.data;
+          that.options.loading = false;
+        })
+        .catch(err => this.reportError(err));
+    },
 
-		downloadMedicalPolicy() {
-			var that = this
-			that.loading = true
-			that.$http({
-				url: '/api/companies/'+that.approvalResponse.company.id+'/procedures/'+that.approvalResponse.procedure.id+'/policy',
-				method: 'GET',
-				headers: {'Authorization': that.currentUser.getAuth()},
-				responseType: 'blob', // important
-			}).then(response => {
-				const disposition = response.headers["content-disposition"];
-				if(disposition && disposition.indexOf('=') !== -1) {
-					var filename = disposition.split('=')[1];
-				}
-				const url = window.URL.createObjectURL(new Blob([response.data]));
-				const link = document.createElement('a');
-				link.href = url;
-				link.setAttribute('download', filename);
-				document.body.appendChild(link);
-				link.click();
-				that.loading = false
-				that.onCloseHandler()
-			}).catch(err => that.reportError(err));
-		},
+    downloadMedicalPolicy() {
+      var that = this;
+      that.loading = true;
+      that
+        .$http({
+          url:
+            '/api/companies/' +
+            that.approvalResponse.company.id +
+            '/procedures/' +
+            that.approvalResponse.procedure.id +
+            '/policy',
+          method: 'GET',
+          headers: {Authorization: that.authString},
+          responseType: 'blob', // important
+        })
+        .then(response => {
+          const disposition = response.headers['content-disposition'];
+          if (disposition && disposition.indexOf('=') !== -1) {
+            var filename = disposition.split('=')[1];
+          }
+          const url = window.URL.createObjectURL(new Blob([response.data]));
+          const link = document.createElement('a');
+          link.href = url;
+          link.setAttribute('download', filename);
+          document.body.appendChild(link);
+          link.click();
+          that.loading = false;
+          that.onCloseHandler();
+        })
+        .catch(err => that.reportError(err));
+    },
 
-		reportError(error) {
-			this.options.loading = false;
-			this.error = error;
-		},
+    reportError(error) {
+      this.options.loading = false;
+      this.error = error;
+    },
 
-		dismissError() {
-			this.error = false;
-		}
-	}
-}
+    dismissError() {
+      this.error = false;
+    },
+  },
+};
 </script>
 
 <style lang="css" scoped>
